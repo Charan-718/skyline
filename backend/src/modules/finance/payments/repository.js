@@ -1,50 +1,78 @@
-import { toCamelCase } from '../../../shared/caseMap.js';
+// payments data access. Status changes are conditional updates only (LLD §2.10).
 
-export function createPaymentRepository({ db }) {
-  return {
-    async findById(id, trx = db) {
-      const row = await trx('payments').where({ id }).first();
-      return row ? toCamelCase(row) : null;
-    },
+export async function insert(trx, row) {
+  const [created] = await trx('payments').insert(row).returning('*');
+  return created;
+}
 
-    async findByIdForUpdate(id, trx) {
-      const row = await trx('payments').where({ id }).forUpdate().first();
-      return row ? toCamelCase(row) : null;
-    },
+export async function findById(conn, id) {
+  return conn('payments').where({ id }).first();
+}
 
-    async insert(row, trx) {
-      const [inserted] = await trx('payments').insert(row).returning('*');
-      return toCamelCase(inserted);
-    },
+/**
+ * The settle statement (LLD §2.10): only an open payment changes, so concurrent or repeated
+ * settlement updates at most once. Returns the updated row, or null when nothing changed.
+ */
+export async function settleIfOpen(trx, id, { status, failureReason, settledAt }) {
+  const result = await trx.raw(
+    `UPDATE payments
+        SET status = ?, failure_reason = ?, settled_at = ?
+      WHERE id = ? AND status IN ('INITIATED', 'PENDING')
+      RETURNING *`,
+    [status, failureReason, settledAt, id],
+  );
+  return result.rows[0] ?? null;
+}
 
-    async settle(id, outcome, failureReason, trx) {
-      const [updated] = await trx('payments')
-        .where({ id })
-        .whereIn('status', ['INITIATED', 'PENDING'])
-        .update({
-          status: outcome,
-          failure_reason: failureReason ?? null,
-          settled_at: trx.fn.now(),
-          updated_at: trx.fn.now(),
-        })
-        .returning('*');
-      return updated ? toCamelCase(updated) : null;
-    },
+/** INITIATED -> PENDING (no settlement, no side effects). Null when the payment was not INITIATED. */
+export async function markPendingIfInitiated(trx, id) {
+  const result = await trx.raw(
+    `UPDATE payments SET status = 'PENDING' WHERE id = ? AND status = 'INITIATED' RETURNING *`,
+    [id],
+  );
+  return result.rows[0] ?? null;
+}
 
-    async listByUser(userId, filters, trx = db) {
-      let q = trx('payments').where({ user_id: userId }).orderBy('created_at', 'desc');
-      if (filters.purpose) q = q.andWhere({ purpose: filters.purpose });
-      if (filters.status) q = q.andWhere({ status: filters.status });
-      const rows = await q.limit(filters.limit ?? 50);
-      return rows.map(toCamelCase);
-    },
+// from/to are calendar dates in `timeZone`, inclusive.
+function applyFilters(query, { purpose, status, from, to, timeZone }) {
+  if (purpose) query.where('purpose', purpose);
+  if (status) query.where('status', status);
+  if (from) query.whereRaw('created_at >= (?::date)::timestamp AT TIME ZONE ?', [from, timeZone]);
+  if (to) query.whereRaw('created_at < ((?::date) + 1)::timestamp AT TIME ZONE ?', [to, timeZone]);
+  return query;
+}
 
-    async listByClub(clubId, filters, trx = db) {
-      let q = trx('payments').where({ club_id: clubId }).orderBy('created_at', 'desc');
-      if (filters.purpose) q = q.andWhere({ purpose: filters.purpose });
-      if (filters.status) q = q.andWhere({ status: filters.status });
-      const rows = await q.limit(filters.limit ?? 50);
-      return rows.map(toCamelCase);
-    },
-  };
+async function page(conn, scope, filters, { limit, offset }) {
+  const base = applyFilters(conn('payments').where(scope), filters);
+  const [{ count }] = await base.clone().count({ count: '*' });
+  const rows = await base.clone().orderBy([{ column: 'created_at', order: 'desc' }, { column: 'id', order: 'desc' }]).limit(limit).offset(offset);
+  return { rows, total: Number(count) };
+}
+
+export const listByUser = (conn, userId, filters, paging) => page(conn, { user_id: userId }, filters, paging);
+export const listByClub = (conn, clubId, filters, paging) => page(conn, { club_id: clubId }, filters, paging);
+
+/** Open payments whose hold has passed (reservation-expiry, OQ-09). */
+export async function listExpirable(conn, { now, holdMinutes, autopayTimeoutHours, limit = 500 }) {
+  const holdCutoff = new Date(now.getTime() - holdMinutes * 60_000);
+  const autopayCutoff = new Date(now.getTime() - autopayTimeoutHours * 3_600_000);
+  return conn('payments')
+    .whereIn('status', ['INITIATED', 'PENDING'])
+    .where((q) =>
+      q
+        .where((a) => a.where({ method: 'SIMULATED' }).where('created_at', '<=', holdCutoff))
+        .orWhere((b) => b.where({ method: 'SIMULATED_AUTOPAY' }).where('created_at', '<=', autopayCutoff)),
+    )
+    .orderBy('created_at')
+    .limit(limit);
+}
+
+export const findOpenByOrder = (conn, orderId) => conn('payments').where({ order_id: orderId }).whereIn('status', ['INITIATED', 'PENDING']).first();
+
+export const listByOrder = (conn, orderId) => conn('payments').where({ order_id: orderId }).orderBy('created_at', 'asc');
+
+/** Latest payment per order (for order lists). */
+export async function latestByOrders(conn, orderIds) {
+  if (!orderIds.length) return [];
+  return conn('payments').distinctOn('order_id').whereIn('order_id', orderIds).orderBy([{ column: 'order_id' }, { column: 'created_at', order: 'desc' }]);
 }

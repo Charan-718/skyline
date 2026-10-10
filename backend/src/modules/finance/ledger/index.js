@@ -1,2 +1,2 @@
-export { createLedgerRepository } from './repository.js';
+export { createLedgerRepository } from './repository.g1.js';
 export { createLedgerService } from './service.js';

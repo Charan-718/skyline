@@ -36,10 +36,16 @@ export function createAnnouncementRepository({ db }) {
     },
 
     async listPublished(filters, trx = db) {
-      let q = trx('announcements').where({ status: 'PUBLISHED' }).orderBy('published_at', 'desc');
+      let q = trx('announcements').where({ status: 'PUBLISHED' });
       if (filters.clubId) q = q.andWhere({ club_id: filters.clubId });
-      const rows = await q.limit(filters.limit ?? 50);
-      return rows.map(toCamelCase);
+      if (filters.category) q = q.andWhere({ category: filters.category });
+      const countRow = await q.clone().count('* as c').first();
+      const total = Number(countRow.c);
+      const rows = await q
+        .orderBy('published_at', 'desc')
+        .offset(filters.offset ?? 0)
+        .limit(filters.limit ?? 20);
+      return { rows: rows.map(toCamelCase), total };
     },
   };
 }

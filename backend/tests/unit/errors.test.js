@@ -13,7 +13,7 @@ describe('AppError (LLD §9)', () => {
   });
 
   it('refuses undocumented codes and mismatched HTTP statuses', () => {
-    expect(() => new AppError('MADE_UP_CODE', 400)).toThrow(/Undocumented/);
+    expect(() => new AppError('MADE_UP_CODE')).toThrow(/Undocumented/);
     expect(() => new AppError('NOT_FOUND', 403)).toThrow(/must use HTTP 404/);
   });
 

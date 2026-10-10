@@ -3,7 +3,7 @@ import { createHandlerRegistry } from './payments/handlerRegistry.js';
 import { createPaymentService } from './payments/service.js';
 import { createSimulator } from './payments/simulator.js';
 import { createPaymentController } from './payments/controller.js';
-import { createDevPaymentRoutes, createPaymentRoutes } from './payments/routes.js';
+import { createDevPaymentRoutes, createPaymentRoutes } from './payments/routes.g2.js';
 import { createLocalFileStorage } from './files/LocalFileStorage.js';
 import { assertFileStorage } from './files/FileStorage.js';
 import { createFileService } from './files/service.js';
@@ -45,8 +45,12 @@ export function createFinanceModule({ db, withTransaction, clock, config, logger
     ledger,
     simulator,
     expenses,
+    income,
+    budgets,
     summary,
     storage: fileStorage,
+    financeRoutes: (deps) => createFinanceRoutes({ controller, upload, ...deps }),
+    paymentRoutes: (deps) => createPaymentRoutes({ controller: paymentController, ...deps }),
     routes: (deps) => {
       const router = createPaymentRoutes({ controller: paymentController, ...deps });
       router.use(createFinanceRoutes({ controller, upload, ...deps }));

@@ -3,7 +3,7 @@ import { requireAuth } from '../../../shared/middleware/requireAuth.js';
 import { csrfHeader } from '../../../shared/middleware/csrfHeader.js';
 import { validate } from '../../../shared/middleware/validate.js';
 import { requireIdempotencyKey, idempotencyMiddleware } from '../../../shared/middleware/idempotency.js';
-import { simulatePaymentBody, paymentIdParam } from './schemas.js';
+import { simulatePaymentBody, paymentIdParam } from './schemas.g1.js';
 
 export function createPaymentRoutes({ paymentController }) {
   const router = Router();
@@ -19,6 +19,14 @@ export function createPaymentRoutes({ paymentController }) {
     validate({ params: paymentIdParam, body: simulatePaymentBody }),
     paymentController.simulate,
   );
+
+  router.get('/me/payments', requireAuth, async (req, res, next) => {
+    try {
+      await paymentController.listMine(req, res);
+    } catch (e) {
+      next(e);
+    }
+  });
 
   return router;
 }

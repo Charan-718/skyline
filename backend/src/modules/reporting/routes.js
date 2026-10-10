@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 const eventIdParam = z.object({ eventId: z.string().uuid() });
 
-export function createReportingRoutes({ eventReportService, authz, eventRepository }) {
+export function createEventReportingRoutes({ eventReportService, authz, eventRepository }) {
   const router = Router();
 
   router.get(

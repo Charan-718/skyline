@@ -11,8 +11,8 @@ export function createAnnouncementController({ announcementService }) {
     },
 
     async list(req, res) {
-      const items = await announcementService.list(req.query);
-      res.json({ data: items });
+      const page = await announcementService.list(req.query);
+      res.json(page);
     },
 
     async get(req, res) {

@@ -1,8 +1,8 @@
 export function createEventController({ eventService }) {
   return {
     async list(req, res) {
-      const events = await eventService.listEvents(req.query);
-      res.json({ data: events });
+      const page = await eventService.listEvents(req.query);
+      res.json(page);
     },
 
     async get(req, res) {
