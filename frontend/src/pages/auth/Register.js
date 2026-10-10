@@ -49,7 +49,7 @@ export default function Register() {
         <Field label="Email" error={form.errors.email} required>
           <Input type="email" autoComplete="email" inputMode="email" {...form.bind('email')} />
         </Field>
-        <Field label="Mobile (WhatsApp)" hint="Optional. Used only for membership renewal reminders." error={form.errors.phoneE164}>
+        <Field label="Mobile" hint="Optional." error={form.errors.phoneE164}>
           <Input type="tel" autoComplete="tel" placeholder="+919876543210" {...form.bind('phoneE164')} />
         </Field>
         <Field label="Password" hint="At least 8 characters." error={form.errors.password} required>

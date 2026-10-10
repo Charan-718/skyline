@@ -4,7 +4,7 @@ import { todayIST } from '../shared/clock.js';
 import { runJob } from './runJob.js';
 import { logger } from '../shared/logger.js';
 
-export function startScheduler(jobs) {
+export function startScheduler(jobs, { notifications } = {}) {
   if (!config.JOBS_ENABLED) {
     logger.info('Jobs disabled');
     return { stop: () => {} };
@@ -43,6 +43,15 @@ export function startScheduler(jobs) {
       );
     }),
   );
+
+  if (notifications) {
+    // notification-dispatch (LLD §7): sends whatever the outbox holds that is due, every minute.
+    tasks.push(
+      cron.schedule('* * * * *', () => {
+        notifications.dispatchPending().catch((err) => logger.error({ err }, 'notification-dispatch failed'));
+      }),
+    );
+  }
 
   logger.info('Scheduler started');
   return {

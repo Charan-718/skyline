@@ -5,7 +5,7 @@ import { paginationQuery } from '../../shared/pagination.js';
 
 // GET /dev/outbox (dev tools only, AUTH; LLD §4.6, §4.11): rendered messages and delivery state.
 
-const outboxQuery = z.object({ channel: z.enum(['EMAIL', 'WHATSAPP']).optional(), ...paginationQuery }).strict();
+const outboxQuery = z.object({ channel: z.enum(['EMAIL']).optional(), ...paginationQuery }).strict();
 
 export function createNotificationDevRoutes({ controller, requireAuth }) {
   const r = Router();

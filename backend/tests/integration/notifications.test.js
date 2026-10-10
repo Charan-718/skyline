@@ -38,13 +38,13 @@ describe('notifications outbox (T-50)', () => {
   const enqueue = (items) => ctx.container.withTransaction((trx) => ctx.container.notifications.enqueue(trx, items));
   const dispatch = () => ctx.container.notifications.dispatchPending({ now: ctx.clock.now() });
 
-  it('enqueue snapshots the destination; TC-REM-03: no phone → WhatsApp SKIPPED (NO_CONTACT)', async () => {
-    const res = await enqueue([reminder(user.id, 'EMAIL', 't1'), reminder(user.id, 'WHATSAPP', 't1'), reminder(noPhone.id, 'EMAIL', 't2'), reminder(noPhone.id, 'WHATSAPP', 't2')]);
-    expect(res).toEqual({ queued: 3, skipped: 1, duplicates: 0 });
+  it('enqueue snapshots the destination; an inactive user is SKIPPED (NO_CONTACT)', async () => {
+    await ctx.db('users').where({ id: noPhone.id }).update({ is_active: false });
+    const res = await enqueue([reminder(user.id, 'EMAIL', 't1'), reminder(noPhone.id, 'EMAIL', 't2')]);
+    expect(res).toEqual({ queued: 1, skipped: 1, duplicates: 0 });
     const rows = await deliveries(ctx.db);
-    const skipped = rows.find((r) => r.status === 'SKIPPED');
-    expect(skipped).toMatchObject({ recipient_user_id: noPhone.id, channel: 'WHATSAPP', last_error: 'NO_CONTACT', destination: null });
-    expect(rows.find((r) => r.recipient_user_id === user.id && r.channel === 'WHATSAPP').destination).toBe('+919876543210');
+    expect(rows.find((r) => r.status === 'SKIPPED')).toMatchObject({ recipient_user_id: noPhone.id, channel: 'EMAIL', last_error: 'NO_CONTACT', destination: null });
+    expect(rows.find((r) => r.recipient_user_id === user.id).destination).toBe(user.email);
   });
 
   it('dedupe key: enqueueing twice keeps one row (ON CONFLICT DO NOTHING)', async () => {
@@ -67,27 +67,26 @@ describe('notifications outbox (T-50)', () => {
   });
 
   it('dispatch (dev adapters): PENDING → SENT with provider dev; destinations never logged', async () => {
-    await enqueue([reminder(user.id, 'EMAIL', 't1'), reminder(user.id, 'WHATSAPP', 't1')]);
+    await enqueue([reminder(user.id, 'EMAIL', 't1')]);
     logs.length = 0;
-    expect(await dispatch()).toEqual({ recovered: 0, claimed: 2, sent: 2, retried: 0, failed: 0 });
+    expect(await dispatch()).toEqual({ recovered: 0, claimed: 1, sent: 1, retried: 0, failed: 0 });
     const rows = await deliveries(ctx.db);
     expect(rows.every((r) => r.status === 'SENT' && r.provider === 'dev' && r.attempts === 1 && r.sent_at)).toBe(true);
     expect(await dispatch()).toMatchObject({ claimed: 0 });
-    expect(logs.join('')).not.toContain('+919876543210');
     expect(logs.join('')).not.toContain(user.email);
   });
 
-  it('TC-ANN-03: forced EMAIL failures retry at +1 min and +5 min, then FAILED after 3 attempts; WhatsApp unaffected', async () => {
+  it('TC-ANN-03: forced EMAIL failures retry at +1 min and +5 min, then FAILED after 3 attempts', async () => {
     const failing = buildTestContext({ configOverrides: { DEV_NOTIFY_FAIL_CHANNEL: 'EMAIL' } });
     try {
       await failing.container.withTransaction(async (trx) => {
         // the business change commits even though delivery will fail (failure isolation, NFR-08)
         await trx('audit_logs').insert({ action: 'ANNOUNCEMENT_PUBLISHED', entity_type: 'announcement' });
-        await failing.container.notifications.enqueue(trx, [reminder(user.id, 'EMAIL', 'f'), reminder(user.id, 'WHATSAPP', 'f')]);
+        await failing.container.notifications.enqueue(trx, [reminder(user.id, 'EMAIL', 'f')]);
       });
       const run = () => failing.container.notifications.dispatchPending({ now: failing.clock.now() });
       const email = () => failing.db('notification_deliveries').where({ channel: 'EMAIL' }).first();
-      expect(await run()).toMatchObject({ claimed: 2, sent: 1, retried: 1 });
+      expect(await run()).toMatchObject({ claimed: 1, retried: 1 });
       expect(await email()).toMatchObject({ status: 'PENDING', attempts: 1, last_error: 'DEV_FORCED_FAILURE' });
       expect((await email()).next_attempt_at.toISOString()).toBe(new Date(failing.clock.now().getTime() + 60_000).toISOString());
       expect(await run()).toMatchObject({ claimed: 0 }); // not due yet
@@ -99,7 +98,6 @@ describe('notifications outbox (T-50)', () => {
       failing.clock.advance({ minutes: 1 });
       expect(await run()).toMatchObject({ claimed: 1, failed: 1 });
       expect(await email()).toMatchObject({ status: 'FAILED', attempts: 3 });
-      expect((await failing.db('notification_deliveries').where({ channel: 'WHATSAPP' }).first()).status).toBe('SENT');
       expect(await failing.db('audit_logs').where({ action: 'ANNOUNCEMENT_PUBLISHED' })).toHaveLength(1);
     } finally {
       await failing.close();
@@ -126,8 +124,8 @@ describe('notifications outbox (T-50)', () => {
 
   it('two dispatchers at once never send the same delivery twice (FOR UPDATE SKIP LOCKED)', async () => {
     const sends = [];
-    const counting = { send: async (m) => { sends.push(m.to ?? m.toE164); await new Promise((r) => setTimeout(r, 20)); return { provider: 'count', providerMessageId: String(sends.length) }; } };
-    const c = buildTestContext({ notificationAdapters: { EMAIL: counting, WHATSAPP: counting } });
+    const counting = { send: async (m) => { sends.push(m.to); await new Promise((r) => setTimeout(r, 20)); return { provider: 'count', providerMessageId: String(sends.length) }; } };
+    const c = buildTestContext({ notificationAdapters: { EMAIL: counting } });
     try {
       const people = await Promise.all(Array.from({ length: 30 }, () => makeUser(c.db)));
       await c.container.withTransaction((trx) => c.container.notifications.enqueue(trx, people.map((p) => reminder(p.id, 'EMAIL', p.id))));

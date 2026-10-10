@@ -6,7 +6,7 @@ import { startScheduler } from './jobs/scheduler.js';
 
 const container = createContainer();
 const app = createApp(container);
-const scheduler = startScheduler(container.jobs);
+const scheduler = startScheduler(container.jobs, { notifications: container.notifications });
 
 const server = app.listen(config.PORT, () => {
   logger.info({ port: config.PORT }, 'SOMS backend listening');

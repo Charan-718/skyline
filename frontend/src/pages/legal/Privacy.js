@@ -29,7 +29,7 @@ export default function Privacy() {
         </ul>
 
         <h2>Messages</h2>
-        <p>We send email for announcements from clubs you belong to, booking confirmations, and low-stock alerts for club heads. If you add a mobile number, we send one WhatsApp reminder seven days before your membership expires. We do not send marketing.</p>
+        <p>We send email for announcements from clubs you belong to, booking confirmations, and low-stock alerts for club heads. We also email you a reminder before your membership expires. We do not send marketing.</p>
 
         <h2>QR codes</h2>
         <p>Ticket and membership QR codes contain only a random code, not your name or any other personal detail. You can issue a new membership QR code at any time from your digital ID.</p>

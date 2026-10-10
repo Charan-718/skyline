@@ -67,6 +67,7 @@ import { createMembershipExpiryJob } from './jobs/definitions/membershipExpiry.j
 import { createRenewalRemindersJob } from './jobs/definitions/renewalReminders.js';
 import { createAutopayRenewalsJob } from './jobs/definitions/autopayRenewals.js';
 import { createReservationExpiryJob } from './jobs/definitions/reservationExpiry.js';
+import { createJobDevRoutes } from './jobs/devRoutes.js';
 
 export function createContainer() {
   const auditRepository = createAuditRepository(db);
@@ -190,7 +191,7 @@ export function createContainer() {
 
   const jobs = {
     membershipExpiry: createMembershipExpiryJob({ db }),
-    renewalReminders: createRenewalRemindersJob({ db, notificationService }),
+    renewalReminders: createRenewalRemindersJob({ notifications: group2.notifications, appBaseUrl: config.APP_BASE_URL }),
     autopayRenewals: createAutopayRenewalsJob({
       db,
       membershipRepository,
@@ -201,11 +202,22 @@ export function createContainer() {
     reservationExpiry: createReservationExpiryJob({ db, paymentService }),
   };
 
+  if (config.devToolsEnabled) {
+    routes.dev = createJobDevRoutes({
+      db,
+      requireAuth: group2.routeDeps.requireAuth,
+      csrfHeader: group2.routeDeps.csrfHeader,
+      renewalReminders: jobs.renewalReminders,
+      notifications: group2.notifications,
+    });
+  }
+
   return {
     db,
     config,
     routes,
     jobs,
+    notifications: group2.notifications,
     services: {
       authService,
       clubService,

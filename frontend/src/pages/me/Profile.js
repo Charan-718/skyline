@@ -39,7 +39,7 @@ function ProfileForm() {
         <Field label="Full name" error={form.errors.fullName} required>
           <Input autoComplete="name" {...form.bind('fullName')} />
         </Field>
-        <Field label="Mobile (WhatsApp)" hint="Needed for WhatsApp renewal reminders." error={form.errors.phoneE164}>
+        <Field label="Mobile" hint="Optional." error={form.errors.phoneE164}>
           <Input type="tel" autoComplete="tel" placeholder="+919876543210" {...form.bind('phoneE164')} />
         </Field>
         <div>

@@ -1,6 +1,6 @@
 import { CHANNELS, render, validatePayload } from './templates.js';
 import { afterFailure, MAX_ATTEMPTS, STUCK_AFTER_MS } from './domain/retryPolicy.js';
-import * as repository from './repository.js';
+import * as repository from './repository.g2.js';
 
 // Transactional outbox (ADR-014, LLD §2.7, §7).
 //   enqueue(trx, items)  — inside the caller's business transaction; ON CONFLICT (dedupe_key)
@@ -33,7 +33,7 @@ export function createNotificationService({ db, clock, auth, adapters, logger })
       if (!item.dedupeKey) throw new TypeError('dedupeKey is required');
       const payload = validatePayload(item.template, item.payload);
       const user = people.get(item.recipientUserId);
-      const destination = item.channel === 'EMAIL' ? user?.email : user?.phoneE164;
+      const destination = user?.email;
       const usable = Boolean(destination) && user?.isActive !== false;
       return {
         club_id: item.clubId ?? null,
@@ -59,13 +59,12 @@ export function createNotificationService({ db, clock, auth, adapters, logger })
   }
 
   async function sendOne(row, now) {
-    const message = render(row.template, row.payload);
-    const adapter = adapters[row.channel];
     try {
-      const sent =
-        row.channel === 'EMAIL'
-          ? await adapter.send({ to: row.destination, subject: message.subject, text: message.text })
-          : await adapter.send({ toE164: row.destination, text: message.text });
+      // Rendering is inside the try: a row whose payload no longer matches its template (for example
+      // one queued by Group 1) fails alone instead of aborting the whole dispatcher pass.
+      const message = render(row.template, row.payload);
+      const adapter = adapters[row.channel];
+      const sent = await adapter.send({ to: row.destination, subject: message.subject, text: message.text });
       await repository.markSent(db, row.id, { ...sent, now });
       return 'sent';
     } catch (err) {
