@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Minus, Plus, ShoppingBag, Trash } from '@phosphor-icons/react';
+import { Minus, Plus, ShoppingBag, Storefront, Trash } from '@phosphor-icons/react';
 import { merchApi } from '../../api/endpoints';
 import { useAuth } from '../../auth/AuthProvider';
 import { useClub, useIdempotencyKey } from '../../hooks';
@@ -116,6 +116,16 @@ export default function ShopCart() {
       /* ignore */
     }
   }, [cart, clubId]);
+
+  if (club.isError) {
+    return (
+      <div className="card">
+        <EmptyState icon={Storefront} title="We couldn't find this club's shop" action={<Button variant="primary" to="/clubs">Browse clubs</Button>}>
+          The link may be out of date. Open the shop again from the club's page.
+        </EmptyState>
+      </div>
+    );
+  }
 
   return (
     <>

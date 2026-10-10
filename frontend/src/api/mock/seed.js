@@ -228,7 +228,6 @@ export function createSeed() {
   };
   const apparel = cat(sky, 'Apparel');
   const accessories = cat(sky, 'Accessories');
-  const roboKits = cat(robo, 'Kits');
   const mkProduct = (club, category, p, sizes) => {
     const product = { id: uid('prd'), clubId: club.id, categoryId: category.id, status: 'ACTIVE', memberDiscountEligible: true, availableToNonMembers: true, offerPricePaise: null, offerStartsAt: null, offerEndsAt: null, createdAt: daysFromNow(-90), ...p };
     db.products.push(product);
@@ -239,13 +238,13 @@ export function createSeed() {
     });
     return product;
   };
-  const hoodie = mkProduct(sky, apparel, { name: 'Skyline Hoodie', description: 'Heavyweight navy hoodie with embroidered logo.', pricePaise: 89900, offerPricePaise: 79900, offerStartsAt: daysFromNow(-3), offerEndsAt: daysFromNow(4) }, [['S', 14], ['M', 24], ['L', 22], ['XL', 5]]);
-  const tee = mkProduct(sky, apparel, { name: 'Tech Fest 2026 T-shirt', description: 'Limited edition fest tee, 100% cotton.', pricePaise: 39900 }, [['S', 20], ['M', 30], ['L', 28], ['XL', 12], ['XXL', 6, 3]]);
-  const cap = mkProduct(sky, accessories, { name: 'Embroidered Cap', description: 'Adjustable strap, one size.', pricePaise: 29900 }, [['ONE_SIZE', 18]]);
-  const stickers = mkProduct(sky, accessories, { name: 'Sticker Pack', description: 'Ten die-cut vinyl stickers.', pricePaise: 9900, memberDiscountEligible: false }, [['ONE_SIZE', 60, 10]]);
-  mkProduct(sky, accessories, { name: 'Members-only Tote', description: 'Canvas tote for members.', pricePaise: 24900, availableToNonMembers: false }, [['ONE_SIZE', 25]]);
-  mkProduct(sky, apparel, { name: 'Varsity Jacket', description: 'Pre-order sample, not yet on sale.', pricePaise: 189900, status: 'DRAFT' }, [['M', 12, 2], ['L', 12, 2]]);
-  mkProduct(robo, roboKits, { name: 'Line Follower Starter Kit', description: 'Chassis, motors, sensor array and driver board.', pricePaise: 149900 }, [['ONE_SIZE', 12, 3]]);
+  const tee = mkProduct(sky, apparel, { name: 'Tech Fest 2026 Polo', description: 'Black pique polo with the circuit-tree print and chest logo.', pricePaise: 44900, offerPricePaise: 39900, offerStartsAt: daysFromNow(-3), offerEndsAt: daysFromNow(4), imageUrl: '/merch/polo.webp' }, [['S', 20], ['M', 30], ['L', 28], ['XL', 12], ['XXL', 6, 3]]);
+  const cap = mkProduct(sky, accessories, { name: 'Embroidered Cap', description: 'Black cap with blue contrast stitching. Adjustable strap, one size.', pricePaise: 29900, imageUrl: '/merch/cap.webp' }, [['ONE_SIZE', 18]]);
+  mkProduct(sky, accessories, { name: 'Members-only Tote', description: 'Black canvas tote with the circuit-tree print.', pricePaise: 24900, availableToNonMembers: false, imageUrl: '/merch/tote.webp' }, [['ONE_SIZE', 25]]);
+  const mug = mkProduct(sky, accessories, { name: 'Logo Mug', description: '330 ml black ceramic mug, dishwasher safe.', pricePaise: 19900, imageUrl: '/merch/mug.webp' }, [['ONE_SIZE', 30]]);
+  mkProduct(sky, accessories, { name: 'Club Pen', description: 'Metal ballpoint with a soft grip and printed logo.', pricePaise: 4900, memberDiscountEligible: false, imageUrl: '/merch/pen.webp' }, [['ONE_SIZE', 80, 10]]);
+  mkProduct(sky, accessories, { name: '32 GB USB Drive', description: 'Capped USB 3.0 drive, preloaded with the club handbook.', pricePaise: 34900, imageUrl: '/merch/usb.webp' }, [['ONE_SIZE', 20, 4]]);
+  mkProduct(sky, accessories, { name: 'Desk Flag', description: 'Mini desk flag with stand for your study table.', pricePaise: 14900, imageUrl: '/merch/flag.webp' }, [['ONE_SIZE', 15, 3]]);
 
   const variantsOf = (p) => db.variants.filter((v) => v.productId === p.id);
   const merchQuote = (product, user) => {
@@ -268,16 +267,16 @@ export function createSeed() {
   function product0(picks) {
     return picks[0][0];
   }
-  order(asha, [[hoodie, 'M', 1], [stickers, 'ONE_SIZE', 1]], 20, 'SUCCEEDED', true);
+  order(asha, [[tee, 'M', 1], [mug, 'ONE_SIZE', 1]], 20, 'SUCCEEDED', true);
   order(ravi, [[tee, 'L', 2]], 18, 'SUCCEEDED', true);
-  order(meera, [[hoodie, 'S', 1]], 6);
+  order(meera, [[tee, 'S', 1]], 6);
   order(karthik, [[cap, 'ONE_SIZE', 1], [tee, 'M', 1]], 4);
   order(priya, [[tee, 'S', 1]], 3, 'FAILED');
   others.slice(0, 22).forEach((u, i) => {
-    const picks = [[[hoodie, ['S', 'M', 'L', 'XL'][i % 4], 1]], [[tee, ['M', 'L', 'XL', 'XXL'][i % 4], 1]], [[cap, 'ONE_SIZE', 1]], [[stickers, 'ONE_SIZE', 2]]][i % 4];
+    const picks = [[[tee, ['S', 'M', 'L', 'XL'][i % 4], 1]], [[tee, ['M', 'L', 'XL', 'XXL'][i % 4], 1]], [[cap, 'ONE_SIZE', 1]], [[mug, 'ONE_SIZE', 2]]][i % 4];
     order(u, picks, 1 + ((i * 3) % 40), i === 9 ? 'FAILED' : 'SUCCEEDED', i % 3 === 0);
   });
-  order(others[23], [[hoodie, 'L', 1]], 0, null); // pending payment (stock reserved)
+  order(others[23], [[tee, 'L', 1]], 0, null); // pending payment (stock reserved)
   db.variants.forEach((v) => evaluateLowStock(db, v));
 
   /* ── Fundraisers & tasks ── */
@@ -341,7 +340,7 @@ export function createSeed() {
   mkExpense({ title: 'Snacks for volunteers', description: 'Freshers setup team', amountPaise: 185000, status: 'PAID', submittedBy: others[0].id, eventId: freshers.id, daysAgo: 30 });
   mkExpense({ title: 'Poster printing', description: 'A2 posters × 40 for clothing drive', amountPaise: 240000, status: 'PAID', submittedBy: meera.id, fundraiserId: winter.id, daysAgo: 14 });
   mkExpense({ title: 'Tech Fest venue deposit', description: 'Refundable deposit to the auditorium committee', amountPaise: 2500000, kind: 'DIRECT', status: 'PAID', submittedBy: ravi.id, eventId: techFest.id, daysAgo: 12 });
-  mkExpense({ title: 'Hoodie batch, print vendor', description: 'Balance payment for 69 hoodies', amountPaise: 3450000, kind: 'DIRECT', status: 'PAID', submittedBy: ravi.id, daysAgo: 45 });
+  mkExpense({ title: 'Polo batch, print vendor', description: 'Balance payment for 69 polos', amountPaise: 3450000, kind: 'DIRECT', status: 'PAID', submittedBy: ravi.id, daysAgo: 45 });
   mkExpense({ title: 'Packing boxes', description: 'Cartons and tape for donations', amountPaise: 92000, status: 'APPROVED', submittedBy: meera.id, fundraiserId: winter.id, daysAgo: 4 });
   mkExpense({ title: 'Speaker travel for Tech Fest', description: 'Cab fare for keynote speaker', amountPaise: 350000, status: 'APPROVED', submittedBy: karthik.id, eventId: techFest.id, daysAgo: 3 });
   mkExpense({ title: 'Lanyards & badges', description: '300 lanyards for Tech Fest', amountPaise: 420000, status: 'SUBMITTED', submittedBy: karthik.id, eventId: techFest.id, daysAgo: 2 });

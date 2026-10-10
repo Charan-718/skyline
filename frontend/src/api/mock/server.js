@@ -11,7 +11,7 @@ import { routes as fundRoutes } from './handlers/fundraisers';
 import { routes as financeRoutes } from './handlers/finance';
 import { routes as devJobRoutes } from './handlers/dev';
 
-const STORAGE_KEY = 'soms.demo.db.v2';
+const STORAGE_KEY = 'soms.demo.db.v4';
 const SESSION_KEY = 'soms.demo.sid';
 
 const storage = {

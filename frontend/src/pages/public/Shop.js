@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, TShirt } from '@phosphor-icons/react';
+import { ShoppingCart, Storefront, TShirt } from '@phosphor-icons/react';
 import { merchApi } from '../../api/endpoints';
 import { useAuth } from '../../auth/AuthProvider';
 import { useClub } from '../../hooks';
@@ -30,12 +30,12 @@ function ProductCard({ product, onAdd, signedIn }) {
   return (
     <article className="card" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div className="product-art">
-        <TShirt size={56} weight="duotone" aria-hidden />
+        {product.imageUrl ? <img src={`${process.env.PUBLIC_URL}${product.imageUrl}`} alt="" loading="lazy" decoding="async" /> : <TShirt size={56} weight="duotone" aria-hidden />}
       </div>
       <div className="card-body stack" style={{ flex: 1 }}>
         <div className="stack-sm" style={{ gap: 2 }}>
           <span className="subtle">{product.categoryName}</span>
-          <h3>{product.name}</h3>
+          <h3 className="product-title">{product.name}</h3>
           <p className="subtle">{product.description}</p>
         </div>
         <div className="row" style={{ alignItems: 'baseline' }}>
@@ -108,6 +108,16 @@ export default function Shop() {
 
   const categories = [...new Set((products.data || []).map((p) => p.categoryName))];
   const count = cart.reduce((s, c) => s + c.quantity, 0);
+
+  if (club.isError) {
+    return (
+      <div className="card">
+        <EmptyState icon={Storefront} title="We couldn't find this club's shop" action={<Button variant="primary" to="/clubs">Browse clubs</Button>}>
+          The link may be out of date. Open the shop again from the club's page.
+        </EmptyState>
+      </div>
+    );
+  }
 
   return (
     <>
