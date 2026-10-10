@@ -1,10 +1,13 @@
 import { AppError, assertFound } from '../../shared/errors.js';
+import { toCamelCase } from '../../shared/caseMap.js';
 import { withTransaction } from '../../db/transaction.js';
 import { randomToken } from '../../shared/tokens.js';
 import { todayIST } from '../../shared/clock.js';
 import { buildMembershipQrPayload, renderQrSvg } from '../../shared/qr.js';
 import { canRegister, canRenew, effectiveMembershipStatus } from './domain/membershipStateMachine.js';
 import { computeTermDates } from './domain/termDates.js';
+import { membershipSummary } from './presenter.js';
+import { parsePagination, paginatedResponse } from '../../shared/pagination.js';
 
 function planSnapshot(plan) {
   return {
@@ -209,7 +212,152 @@ export function createMembershipService({
     },
 
     async listMine(userId) {
-      return membershipRepository.listMyMemberships(userId);
+      const rows = await membershipRepository.listMyMemberships(userId);
+      return Promise.all(
+        rows.map((m) => membershipSummary(membershipRepository.db, m, { clubRepository, membershipRepository })),
+      );
+    },
+
+    async getDetail(userId, membershipId) {
+      const membership = await membershipRepository.findMembershipById(membershipId);
+      assertFound(membership, 'Membership not found');
+      if (membership.userId !== userId) throw new AppError('FORBIDDEN', 403, 'Forbidden');
+      const summary = await membershipSummary(membershipRepository.db, membership, {
+        clubRepository,
+        membershipRepository,
+      });
+      const terms = await membershipRepository.db('membership_terms')
+        .where({ membership_id: membershipId })
+        .orderBy('created_at', 'desc');
+      const termIds = terms.map((t) => t.id);
+      const current = terms.find(
+        (t) => t.status === 'PAID' && t.starts_on <= todayIST() && t.ends_on >= todayIST(),
+      );
+      const payments = termIds.length
+        ? await membershipRepository.db('payments').whereIn('membership_term_id', termIds).orderBy('created_at', 'desc')
+        : [];
+      const pendingPayment =
+        payments.find((p) => ['INITIATED', 'PENDING'].includes(p.status) && p.method === 'SIMULATED') ?? null;
+      const renewalOptions = await membershipRepository.listPlansForClub(membership.clubId, false);
+      const consents = await membershipRepository.db('autopay_consents')
+        .where({ membership_id: membershipId })
+        .orderBy('created_at', 'desc');
+      const renewalAttempts = await membershipRepository.db('renewal_attempts')
+        .where({ membership_id: membershipId })
+        .orderBy('created_at', 'desc');
+      const verified = await authService.isVerifiedStudent(userId);
+      return {
+        ...summary,
+        benefits: current
+          ? {
+              planName: current.plan_name,
+              eventDiscountBps: current.event_discount_bps,
+              merchDiscountBps: current.merch_discount_bps,
+              earlyBirdAccess: current.early_bird_access,
+              benefitsText: current.benefits_text,
+            }
+          : null,
+        terms: terms.map((t) => toCamelCase(t)),
+        payments: payments.map((p) => toCamelCase(p)),
+        pendingPayment: pendingPayment ? toCamelCase(pendingPayment) : null,
+        renewalOptions: renewalOptions.map((p) => ({
+          planId: p.id,
+          name: p.name,
+          feePaise: Number(p.feePaise),
+          durationMonths: p.durationMonths,
+        })),
+        autopay: {
+          enabled: membership.autopayEnabled,
+          planId: membership.autopayPlanId,
+          amountPaise: membership.autopayAmountPaise,
+          nextAttemptOn: membership.autopayEnabled ? membership.expiresOn : null,
+        },
+        consents: consents.map((c) => toCamelCase(c)),
+        renewalAttempts: renewalAttempts.map((r) => toCamelCase(r)),
+        verifiedStudent: verified,
+      };
+    },
+
+    async setAutopay(userId, membershipId, body) {
+      const membership = await membershipRepository.findMembershipById(membershipId);
+      assertFound(membership, 'Membership not found');
+      if (membership.userId !== userId) throw new AppError('FORBIDDEN', 403, 'Forbidden');
+      if (body.enabled) {
+        if (effectiveMembershipStatus(membership) !== 'ACTIVE') {
+          throw new AppError('MEMBERSHIP_NOT_ACTIVE', 422, 'Membership not active');
+        }
+        if (!body.acknowledgeSimulated || !body.consentTextVersion) {
+          throw new AppError('ACK_REQUIRED', 400, 'AutoPay acknowledgement required');
+        }
+        const plan = await membershipRepository.findPlan(body.planId);
+        if (!plan || plan.clubId !== membership.clubId || plan.status !== 'ACTIVE') {
+          throw new AppError('PLAN_NOT_AVAILABLE', 422, 'Plan not available');
+        }
+        await membershipRepository.updateMembership(membershipId, {
+          autopay_enabled: true,
+          autopay_plan_id: plan.id,
+          autopay_amount_paise: plan.feePaise,
+        });
+        await membershipRepository.db('autopay_consents').insert({
+          membership_id: membershipId,
+          user_id: userId,
+          action: 'ENABLED',
+          plan_id: plan.id,
+          consented_amount_paise: plan.feePaise,
+          consent_text_version: body.consentTextVersion,
+        });
+      } else {
+        await membershipRepository.updateMembership(membershipId, { autopay_enabled: false });
+        await membershipRepository.db('autopay_consents').insert({
+          membership_id: membershipId,
+          user_id: userId,
+          action: 'DISABLED',
+          plan_id: membership.autopayPlanId,
+          consented_amount_paise: membership.autopayAmountPaise,
+          consent_text_version: null,
+        });
+      }
+      const updated = await membershipRepository.findMembershipById(membershipId);
+      return {
+        enabled: updated.autopayEnabled,
+        planId: updated.autopayPlanId,
+        amountPaise: updated.autopayAmountPaise,
+        nextAttemptOn: updated.autopayEnabled ? updated.expiresOn : null,
+      };
+    },
+
+    async listClubMembers(actorUserId, clubId, query) {
+      const head = await authz.isClubHead(actorUserId, clubId);
+      const tr = await authz.isTreasurer(actorUserId, clubId);
+      if (!head && !tr) throw new AppError('FORBIDDEN', 403, 'Forbidden');
+      const { page, pageSize, offset } = parsePagination(query, { page: 1, pageSize: 20, maxPageSize: 100 });
+      const { rows, total } = await membershipRepository.listClubMemberships(clubId, {
+        q: query.q,
+        status: query.status,
+        planId: query.planId,
+        expiringWithin: query.expiringWithin,
+        offset,
+        limit: pageSize,
+      });
+      const data = await Promise.all(
+        rows.map(async (r) => {
+          const m = toCamelCase(r);
+          m.effectiveStatus = effectiveMembershipStatus(m);
+          const summary = await membershipSummary(membershipRepository.db, m, {
+            clubRepository,
+            membershipRepository,
+          });
+          const verified = await authService.isVerifiedStudent(m.userId);
+          return {
+            ...summary,
+            userId: m.userId,
+            fullName: r.full_name,
+            email: r.email,
+            verificationStatus: verified ? 'VERIFIED' : 'NOT_VERIFIED',
+          };
+        }),
+      );
+      return paginatedResponse(data, page, pageSize, total);
     },
 
     async getDigitalId(userId, membershipId) {

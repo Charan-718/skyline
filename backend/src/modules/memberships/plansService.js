@@ -42,5 +42,39 @@ export function createPlansService({ membershipRepository, authz, authService })
       assertFound(plan, 'Plan not found');
       return plan;
     },
+
+    async updatePlan(actorUserId, planId, dto) {
+      const plan = await membershipRepository.findPlan(planId);
+      assertFound(plan, 'Plan not found');
+      await authz.requireClubHead(actorUserId, plan.clubId);
+      if (plan.status === 'ARCHIVED') {
+        throw new AppError('CONFLICT_STATE', 409, 'Archived plan cannot be edited');
+      }
+      const patch = {};
+      if (dto.name != null) patch.name = dto.name;
+      if (dto.description != null) patch.description = dto.description;
+      if (dto.benefitsText != null) patch.benefits_text = dto.benefitsText;
+      if (dto.feePaise != null) patch.fee_paise = dto.feePaise;
+      if (dto.durationMonths != null) patch.duration_months = dto.durationMonths;
+      if (dto.eventDiscountBps != null) patch.event_discount_bps = dto.eventDiscountBps;
+      if (dto.merchDiscountBps != null) patch.merch_discount_bps = dto.merchDiscountBps;
+      if (dto.earlyBirdAccess != null) patch.early_bird_access = dto.earlyBirdAccess;
+      const [updated] = await membershipRepository.db('membership_plans')
+        .where({ id: planId })
+        .update({ ...patch, updated_at: membershipRepository.db.fn.now() })
+        .returning('*');
+      return updated;
+    },
+
+    async archivePlan(actorUserId, planId) {
+      const plan = await membershipRepository.findPlan(planId);
+      assertFound(plan, 'Plan not found');
+      await authz.requireClubHead(actorUserId, plan.clubId);
+      const [updated] = await membershipRepository.db('membership_plans')
+        .where({ id: planId })
+        .update({ status: 'ARCHIVED', updated_at: membershipRepository.db.fn.now() })
+        .returning('*');
+      return updated;
+    },
   };
 }

@@ -686,13 +686,13 @@ Role notation: `PUBLIC` (no auth), `AUTH` (any user), `OWNER` (resource owner), 
 Register request/response:
 ```json
 POST /api/v1/auth/register
-{ "email": "asha@srkrec.ac.in", "password": "S3cure!pass", "fullName": "Asha Rao", "phoneE164": "+919876543210" }
+{ "email": "asha@skyline.ac.in", "password": "S3cure!pass", "fullName": "Asha Rao", "phoneE164": "+919876543210" }
 201
-{ "data": { "id": "6f1e…", "email": "asha@srkrec.ac.in", "fullName": "Asha Rao", "phoneE164": "+919876543210" } }
+{ "data": { "id": "6f1e…", "email": "asha@skyline.ac.in", "fullName": "Asha Rao", "phoneE164": "+919876543210" } }
 ```
 `GET /auth/me` response:
 ```json
-{ "data": { "user": { "id": "6f1e…", "fullName": "Asha Rao", "email": "asha@srkrec.ac.in" },
+{ "data": { "user": { "id": "6f1e…", "fullName": "Asha Rao", "email": "asha@skyline.ac.in" },
   "capabilities": { "verifiedStudent": true,
     "memberships": [{ "clubId": "c1…", "membershipId": "m1…", "effectiveStatus": "ACTIVE", "expiresOn": "2027-06-30" }],
     "clubRoles": [{ "clubId": "c1…", "role": "VOLUNTEER" }],

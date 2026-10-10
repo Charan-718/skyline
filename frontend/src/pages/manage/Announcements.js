@@ -93,11 +93,11 @@ function Deliveries({ announcement, onClose }) {
             {['SENT', 'PENDING', 'FAILED', 'SKIPPED'].map((s) => (
               <div key={s} className="card card-body stat">
                 <span className="stat-label"><StatusBadge status={s} /></span>
-                <span className="stat-value">{q.data.counts[s] || 0}</span>
+                <span className="stat-value">{q.data.counts?.[s] || 0}</span>
               </div>
             ))}
           </div>
-          <ProgressBar value={q.data.counts.SENT || 0} max={q.data.total || 1} label={`${q.data.counts.SENT || 0} of ${q.data.total} delivered`} tone="success" />
+          <ProgressBar value={q.data.counts?.SENT || 0} max={q.data.total || 1} label={`${q.data.counts?.SENT || 0} of ${q.data.total} delivered`} tone="success" />
           <Segmented label="Filter deliveries" value={status} onChange={setStatus} options={[{ value: '', label: 'All' }, { value: 'SENT', label: 'Sent' }, { value: 'FAILED', label: 'Failed' }, { value: 'SKIPPED', label: 'Skipped' }]} />
           <div className="card card-flush" style={{ maxHeight: 360, overflow: 'auto' }}>
             <DataTable
@@ -181,7 +181,7 @@ export default function Announcements() {
                         ) : (
                           a.sendEmail && (
                             <Button size="sm" icon={EnvelopeSimple} onClick={() => setReport(a)}>
-                              {a.deliveryCounts.SENT || 0}/{a.deliveryCounts.total} delivered
+                              {a.deliveryCounts?.SENT || 0}/{a.deliveryCounts?.total ?? 0} delivered
                             </Button>
                           )
                         )}

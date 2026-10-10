@@ -80,8 +80,8 @@ export default function Fundraisers() {
                   <ProgressBar value={f.progressPct} label="Task progress" tone={HEALTH_TONE[f.health]} />
                   <ProgressBar value={f.timeElapsedPct} label="Time elapsed" tone="info" />
                   <div className="row-between subtle">
-                    <span><span className="num">{f.counts.todo + f.counts.inProgress}</span> pending{f.counts.overdue > 0 && <strong style={{ color: 'var(--color-danger)' }}> · {f.counts.overdue} overdue</strong>}</span>
-                    {f.goalAmountPaise && <span><Money paise={f.money.incomePaise} compact /> / <Money paise={f.goalAmountPaise} compact /></span>}
+                    <span><span className="num">{(f.counts?.todo ?? 0) + (f.counts?.inProgress ?? 0)}</span> pending{(f.counts?.overdue ?? 0) > 0 && <strong style={{ color: 'var(--color-danger)' }}> · {f.counts.overdue} overdue</strong>}</span>
+                    {f.goalAmountPaise && f.money && <span><Money paise={f.money.incomePaise} compact /> / <Money paise={f.goalAmountPaise} compact /></span>}
                   </div>
                 </div>
               </Link>

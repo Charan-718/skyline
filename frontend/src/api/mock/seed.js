@@ -3,6 +3,7 @@
 import { activeBenefits, daysFromNow, discount, uid } from './domain';
 import { bookEvent, enqueue, evaluateLowStock, moveStock, placeOrder, postLedger, settlePayment, startMembershipTerm } from './ops';
 
+/** Keep in sync with backend `src/db/seeds/lib/demoEngagementSeed.js` (live mode). */
 export const DEMO_PASSWORD = 'demo1234';
 
 const FIRST = ['Aarav', 'Diya', 'Vihaan', 'Ananya', 'Ishaan', 'Saanvi', 'Arjun', 'Kavya', 'Rohan', 'Nisha', 'Aditya', 'Pooja', 'Siddharth', 'Lakshmi', 'Varun', 'Sneha', 'Rahul', 'Divya', 'Nikhil', 'Harini', 'Tarun', 'Bhavya', 'Kiran', 'Swathi', 'Manoj', 'Keerthi', 'Pranav', 'Yamini', 'Gautham', 'Ritika', 'Sai', 'Teja', 'Akhil', 'Sravya', 'Naveen', 'Mounika'];
@@ -22,30 +23,33 @@ export function createSeed() {
     const u = { id: uid('usr'), fullName, email, phoneE164: phone, isActive: true, createdAt: daysFromNow(-300) };
     db.users.push(u);
     if (verified) {
-      const sid = studentId || `SRKR2023${String(db.users.length).padStart(4, '0')}`;
+      const sid = studentId || `SKY2023${String(db.users.length).padStart(4, '0')}`;
       db.verifications.push({ id: uid('ver'), userId: u.id, outcome: 'VERIFIED', adapter: 'mock', checkedAt: daysFromNow(-280), supersededAt: null });
       db.studentFixtures.push({ studentIdentifier: sid, fullName, linkedUserId: u.id });
     }
     return u;
   };
-  const asha = mkUser('Asha Rao', 'asha@srkrec.ac.in', { studentId: 'SRKR2023CS001' });
-  const ravi = mkUser('Ravi Kumar', 'ravi@srkrec.ac.in');
-  const meera = mkUser('Meera Iyer', 'meera@srkrec.ac.in');
-  const karthik = mkUser('Karthik Reddy', 'karthik@srkrec.ac.in');
+  const asha = mkUser('Asha Rao', 'asha@skyline.ac.in', { studentId: 'SKY2023CS001' });
+  const ravi = mkUser('Ravi Kumar', 'ravi@skyline.ac.in', { studentId: 'SKY2022ME042' });
+  const meera = mkUser('Meera Iyer', 'meera@skyline.ac.in', { studentId: 'SKY2023EE056' });
+  const karthik = mkUser('Karthik Reddy', 'karthik@skyline.ac.in', { studentId: 'SKY2023IT088' });
   const priya = mkUser('Priya Nair', 'priya.nair@gmail.com', { verified: false, phone: null });
-  const vikram = mkUser('Vikram Shetty', 'vikram@srkrec.ac.in');
+  const vikram = mkUser('Vikram Shetty', 'vikram@skyline.ac.in', { studentId: 'SKY2023CE044' });
   const others = [];
   for (let i = 0; i < 36; i += 1) {
-    const name = `${FIRST[i % FIRST.length]} ${LAST[(i * 7) % LAST.length]}`;
-    others.push(mkUser(name, `${name.toLowerCase().replace(' ', '.')}${i}@srkrec.ac.in`, { phone: i % 9 === 0 ? null : undefined }));
+    const first = FIRST[i % FIRST.length];
+    const last = LAST[(i * 7) % LAST.length];
+    const name = `${first} ${last}`;
+    const local = `${first}.${last}${i > 0 ? i : ''}`.toLowerCase().replace(/[^a-z0-9.]/g, '');
+    others.push(mkUser(name, `${local}@skyline.ac.in`, { phone: i % 9 === 0 ? null : undefined }));
   }
   // Unlinked fixtures so new registrations can verify in the demo.
-  db.studentFixtures.push({ studentIdentifier: 'SRKR2024EC017', fullName: 'Priya Nair', linkedUserId: null });
-  db.studentFixtures.push({ studentIdentifier: 'SRKR2025ME042', fullName: 'Demo Student', linkedUserId: null });
+  db.studentFixtures.push({ studentIdentifier: 'SKY2024EC017', fullName: 'Priya Nair', linkedUserId: null });
+  db.studentFixtures.push({ studentIdentifier: 'SKY2025ME042', fullName: 'Arun Menon', linkedUserId: null });
 
   /* ── Clubs & roles ── */
   const mkClub = (name, slug, memberPrefix, description) => {
-    const c = { id: uid('club'), name, slug, memberPrefix, description, contactEmail: `${slug}@srkrec.ac.in`, isActive: true, nextMemberSeq: 1 };
+    const c = { id: uid('club'), name, slug, memberPrefix, description, contactEmail: slug === 'skyline' ? 'office@skyline.ac.in' : `${slug}@skyline.ac.in`, isActive: true, nextMemberSeq: 1 };
     db.clubs.push(c);
     return c;
   };

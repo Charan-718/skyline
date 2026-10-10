@@ -16,7 +16,7 @@ beforeEach(() => {
 });
 
 test('seed ledger reconciles with payments and expenses', async () => {
-  await login('ravi@srkrec.ac.in');
+  await login('ravi@skyline.ac.in');
   const id = await clubId();
   const rec = await call('GET', `/clubs/${id}/finance/reconciliation`);
   expect(rec.status).toBe(200);
@@ -38,7 +38,7 @@ test('booking → simulated payment issues a ticket and check-in is one-time', a
   expect(paid.body.data.status).toBe('SUCCEEDED');
   const ticket = (await call('GET', `/me/tickets/${paid.body.data.target.ticketId}`)).body.data;
 
-  await login('meera@srkrec.ac.in');
+  await login('meera@skyline.ac.in');
   const first = await call('POST', `/events/${fest.id}/check-ins`, { body: { qrPayload: ticket.qrPayload } });
   expect(first.body.data.result).toBe('CHECKED_IN');
   const second = await call('POST', `/events/${fest.id}/check-ins`, { body: { qrPayload: ticket.qrPayload } });
@@ -58,7 +58,7 @@ test('price change is detected and idempotent replay returns the same response',
 });
 
 test('authorization: volunteer cannot read ledger, non-member sees 404 for other club scope', async () => {
-  await login('meera@srkrec.ac.in');
+  await login('meera@skyline.ac.in');
   const id = await clubId();
   expect((await call('GET', `/clubs/${id}/transactions`)).status).toBe(403);
   expect((await call('GET', `/clubs/${id}/finance/summary`)).status).toBe(200);
@@ -67,18 +67,18 @@ test('authorization: volunteer cannot read ledger, non-member sees 404 for other
 });
 
 test('treasurer cannot approve own claim; club head can', async () => {
-  await login('ravi@srkrec.ac.in');
+  await login('ravi@skyline.ac.in');
   const id = await clubId();
   const list = (await call('GET', `/clubs/${id}/expenses`, { query: { status: 'SUBMITTED' } })).body.data;
   const own = list.find((e) => e.submittedByName === 'Ravi Kumar');
   expect(own.viewerCanDecide).toBe(false);
   expect((await call('POST', `/expenses/${own.id}/approve`, { body: {} })).body.error.code).toBe('SELF_APPROVAL_FORBIDDEN');
-  await login('asha@srkrec.ac.in');
+  await login('asha@skyline.ac.in');
   expect((await call('POST', `/expenses/${own.id}/approve`, { body: {} })).body.data.status).toBe('APPROVED');
 });
 
 test('merch order reserves stock then decrements on payment success', async () => {
-  await login('karthik@srkrec.ac.in');
+  await login('karthik@skyline.ac.in');
   const id = await clubId();
   const products = (await call('GET', `/clubs/${id}/products`)).body.data;
   const cap = products.find((p) => p.name === 'Embroidered Cap');

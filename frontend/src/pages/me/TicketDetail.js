@@ -2,14 +2,34 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { eventsApi } from '../../api/endpoints';
 import { DescriptionList, PageHeader } from '../../components/layout';
-import { Alert, ErrorState, StatusBadge, PageLoader } from '../../components/feedback';
+import { Alert, EmptyState, ErrorState, StatusBadge, PageLoader } from '../../components/feedback';
+import { Button } from '../../components/Button';
+import { Ticket } from '@phosphor-icons/react';
 import { Money, QrCode } from '../../components/domain';
 import { formatDateTime } from '../../utils/dates';
 import { label } from '../../utils/status';
 
 export default function TicketDetail() {
   const { ticketId } = useParams();
-  const q = useQuery({ queryKey: ['ticket', ticketId], queryFn: () => eventsApi.myTicket(ticketId) });
+  const validId = ticketId && ticketId !== 'undefined';
+  const q = useQuery({
+    queryKey: ['ticket', ticketId],
+    queryFn: () => eventsApi.myTicket(ticketId),
+    enabled: validId,
+  });
+  if (!validId) {
+    return (
+      <div className="card">
+        <EmptyState
+          icon={Ticket}
+          title="Ticket not found"
+          action={<Button to="/me/tickets">My tickets</Button>}
+        >
+          This link is missing a ticket id. Open My tickets or complete checkout again.
+        </EmptyState>
+      </div>
+    );
+  }
   if (q.isPending) return <PageLoader />;
   if (q.isError) return <div className="card"><ErrorState error={q.error} onRetry={() => q.refetch()} /></div>;
   const t = q.data;

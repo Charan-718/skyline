@@ -25,3 +25,21 @@ export const createPlanBody = z.object({
 export const verifyMembershipBody = z.object({
   qrPayload: z.string().min(1),
 });
+
+export const updatePlanBody = createPlanBody.partial();
+
+export const autopayBody = z.object({
+  enabled: z.boolean(),
+  planId: z.string().uuid().optional(),
+  acknowledgeSimulated: z.boolean().optional(),
+  consentTextVersion: z.string().optional(),
+});
+
+export const clubMembersQuery = z.object({
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+  q: z.string().optional(),
+  status: z.string().optional(),
+  planId: z.string().uuid().optional(),
+  expiringWithin: z.coerce.number().int().optional(),
+});

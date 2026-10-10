@@ -13,11 +13,11 @@ import { Avatar } from '../../components/domain';
 import { errorMessage } from '../../utils/errorMessages';
 
 const DEMO_ACCOUNTS = [
-  { email: 'asha@srkrec.ac.in', name: 'Asha Rao', role: 'Club head · Skyline; volunteer · Robotics' },
-  { email: 'ravi@srkrec.ac.in', name: 'Ravi Kumar', role: 'Treasurer · Skyline' },
-  { email: 'meera@srkrec.ac.in', name: 'Meera Iyer', role: 'Volunteer & event staff · Skyline' },
-  { email: 'karthik@srkrec.ac.in', name: 'Karthik Reddy', role: 'Club head · Photography; treasurer · Robotics; event organizer' },
-  { email: 'vikram@srkrec.ac.in', name: 'Vikram Shetty', role: 'Club head · Robotics' },
+  { email: 'asha@skyline.ac.in', name: 'Asha Rao', role: 'Club head · Skyline; volunteer · Robotics' },
+  { email: 'ravi@skyline.ac.in', name: 'Ravi Kumar', role: 'Treasurer · Skyline' },
+  { email: 'meera@skyline.ac.in', name: 'Meera Iyer', role: 'Volunteer & event staff · Skyline' },
+  { email: 'karthik@skyline.ac.in', name: 'Karthik Reddy', role: 'Club head · Photography; treasurer · Robotics; event organizer' },
+  { email: 'vikram@skyline.ac.in', name: 'Vikram Shetty', role: 'Club head · Robotics' },
   { email: 'priya.nair@gmail.com', name: 'Priya Nair', role: 'Non-member, not yet verified' },
 ];
 

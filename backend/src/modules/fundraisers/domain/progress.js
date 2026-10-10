@@ -1,4 +1,4 @@
-import { addDays, startOfDay } from '../../../shared/dates.js';
+import { addDays, startOfDay, toIsoDateString } from '../../../shared/dates.js';
 import { clamp, divRoundHalfUp } from '../../../shared/intMath.js';
 import { isOverdue } from './fundraiserRules.js';
 
@@ -15,8 +15,10 @@ import { isOverdue } from './fundraiserRules.js';
 export const HEALTH = Object.freeze(['ON_TRACK', 'AT_RISK', 'OFF_TRACK', 'NO_TASKS', 'COMPLETED', 'CANCELLED']);
 
 function elapsed(fundraiser, now, timeZone) {
-  const start = startOfDay(fundraiser.starts_on, timeZone).getTime();
-  const end = startOfDay(addDays(fundraiser.target_date, 1), timeZone).getTime();
+  const startsOn = toIsoDateString(fundraiser.starts_on);
+  const targetDate = toIsoDateString(fundraiser.target_date);
+  const start = startOfDay(startsOn, timeZone).getTime();
+  const end = startOfDay(addDays(targetDate, 1), timeZone).getTime();
   const total = end - start;
   const done = clamp(0, total, now.getTime() - start);
   return { done, total };
@@ -42,7 +44,7 @@ export function computeProgress({ fundraiser, tasks, now, today, timeZone, toler
   let health;
   if (fundraiser.status === 'COMPLETED' || fundraiser.status === 'CANCELLED') health = fundraiser.status;
   else if (!active.length) health = 'NO_TASKS';
-  else if (overdueIds.size > 0 || (today > fundraiser.target_date && progressPct < 100)) health = 'OFF_TRACK';
+  else if (overdueIds.size > 0 || (today > toIsoDateString(fundraiser.target_date) && progressPct < 100)) health = 'OFF_TRACK';
   // progressPct < elapsed% − tolerance, compared exactly: progressPct·total < 100·done − tolerance·total
   else if (BigInt(progressPct) * BigInt(total) < 100n * BigInt(done) - BigInt(tolerancePct) * BigInt(total)) health = 'AT_RISK';
   else health = 'ON_TRACK';
@@ -51,10 +53,13 @@ export function computeProgress({ fundraiser, tasks, now, today, timeZone, toler
 }
 
 export function computeMoney(fundraiser, { income, expensesPaid }) {
+  const inc = Number(income) || 0;
+  const exp = Number(expensesPaid) || 0;
+  const goal = fundraiser.goal_amount_paise != null ? Number(fundraiser.goal_amount_paise) : null;
   return {
-    income,
-    expensesPaid,
-    net: income - expensesPaid,
-    goalPct: fundraiser.goal_amount_paise ? divRoundHalfUp(income * 100, fundraiser.goal_amount_paise) : null,
+    income: inc,
+    expensesPaid: exp,
+    net: inc - exp,
+    goalPct: goal != null && goal > 0 ? divRoundHalfUp(inc * 100, goal) : null,
   };
 }

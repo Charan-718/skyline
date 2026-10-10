@@ -13,10 +13,24 @@ import { db } from './db/knex.js';
 export function createApp(container) {
   const app = express();
 
+  // CRA dev server proxies /api/v1 → backend; needed for secure cookies / session behind proxy.
+  if (!config.isProduction) {
+    app.set('trust proxy', 1);
+  }
+
   app.use(helmet());
+  const corsOrigins = config.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean);
   app.use(
     cors({
-      origin: config.CORS_ORIGIN,
+      origin: config.isProduction
+        ? corsOrigins.length === 1
+          ? corsOrigins[0]
+          : corsOrigins
+        : (origin, cb) => {
+            if (!origin || corsOrigins.includes(origin)) return cb(null, true);
+            if (/^http:\/\/localhost:\d+$/.test(origin)) return cb(null, true);
+            cb(null, false);
+          },
       credentials: true,
     }),
   );
@@ -35,7 +49,12 @@ export function createApp(container) {
     }
   });
 
-  if (config.devToolsEnabled) {
+  app.get('/api/v1/users', async (_req, res) => {
+    const users = await db('users').select('id', 'email', 'full_name', 'is_active', 'created_at');
+    res.json({ data: { users } });
+  });
+
+  if (config.devToolsEnabled && config.COLLEGE_VERIFICATION_MODE === 'mock') {
     app.get('/api/v1/dev/college-roster', async (_req, res) => {
       const { listMockCollegeStudents } = await import(
         './modules/auth/verification/MockCollegeVerificationAdapter.js'
@@ -43,8 +62,7 @@ export function createApp(container) {
       res.json({
         data: {
           source: 'students.mock.json',
-          note:
-            'Universal register: non-college emails become outsiders. College-domain emails are checked against this roster (email + fullName); optional studentIdentifier. POST /me/college-verification to retry.',
+          note: 'COLLEGE_VERIFICATION_MODE=mock — switch to database + npm run seed for Postgres roster.',
           students: listMockCollegeStudents(),
         },
       });
@@ -52,10 +70,13 @@ export function createApp(container) {
   }
 
   const api = express.Router();
-  Object.values(container.routes).forEach((router) => api.use(router));
+  Object.values(container.routes)
+    .filter(Boolean)
+    .forEach((router) => api.use(router));
   app.use('/api/v1', api);
 
   app.use(errorHandler);
 
   return app;
 }
+

@@ -89,7 +89,7 @@ function Verification() {
                   if (form.validate({ studentIdentifier: required('Enter your student ID.'), fullName: required('Enter your name as on college records.') })) verify.mutate(form.values);
                 }}
               >
-                <Field label="Student ID" error={form.errors.studentIdentifier} required hint={IS_DEMO ? 'Demo: try SRKR2024EC017 with name “Priya Nair”, or MOCK-UNAVAILABLE. See Dev tools for more.' : undefined}>
+                <Field label="Student ID" error={form.errors.studentIdentifier} required hint={IS_DEMO ? 'Demo: SKY2024EC017 + Priya Nair, or MOCK-UNAVAILABLE. Live: GET /dev/college-roster for roll IDs.' : 'Use your roll number as on college records.'}>
                   <Input autoComplete="off" className="input mono" {...form.bind('studentIdentifier')} />
                 </Field>
                 <Field label="Full name (as on college records)" error={form.errors.fullName} required>

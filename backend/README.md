@@ -9,7 +9,7 @@ cp ../.env.example ../.env   # or export DATABASE_URL
 cd backend
 npm install
 npm run migrate
-npm run seed                 # no-op; college roster is fixtures/students.mock.json (see verification/fixtures/README.md)
+npm run seed                 # 002 demo + 003 volume + 004 college roster; password demo1234
 npm start                    # http://localhost:4000/api/v1/health
 ```
 

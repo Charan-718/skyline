@@ -34,8 +34,9 @@ export function createOrderPaymentHandler({ ledger, stock, clock }) {
 
     async onSucceeded(payment, trx) {
       const now = clock.now();
-      const order = await confirm(trx, payment.order_id, now);
-      if (!order) throw new Error(`MERCH_ORDER payment ${payment.id} succeeded but order ${payment.order_id} is not PENDING_PAYMENT`);
+      const orderId = payment.orderId ?? payment.order_id;
+      const order = await confirm(trx, orderId, now);
+      if (!order) throw new Error(`MERCH_ORDER payment ${payment.id} succeeded but order ${orderId} is not PENDING_PAYMENT`);
       for (const item of await itemsSorted(trx, order.id)) {
         await stockRepo.sell(trx, item.variant_id, item.quantity);
         await stockRepo.insertMovement(trx, { variant_id: item.variant_id, club_id: order.club_id, type: 'SALE', quantity: -item.quantity, order_id: order.id });
@@ -47,7 +48,8 @@ export function createOrderPaymentHandler({ ledger, stock, clock }) {
 
     async onFailed(payment, reason, trx) {
       const status = reason === 'EXPIRED' ? 'EXPIRED' : 'CANCELLED';
-      const order = await repository.transition(trx, payment.order_id, 'PENDING_PAYMENT', { status, cancelled_at: clock.now(), cancel_reason: reason });
+      const orderId = payment.orderId ?? payment.order_id;
+      const order = await repository.transition(trx, orderId, 'PENDING_PAYMENT', { status, cancelled_at: clock.now(), cancel_reason: reason });
       if (!order) return null;
       for (const item of await itemsSorted(trx, order.id)) {
         await stockRepo.release(trx, item.variant_id, item.quantity);

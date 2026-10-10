@@ -32,12 +32,16 @@ export function createPaymentRepository({ db }) {
     },
 
     async listByUser(userId, filters, trx = db) {
-      let q = trx('payments').where({ user_id: userId }).orderBy('created_at', 'desc');
+      let q = trx('payments').where({ user_id: userId });
       if (filters.purpose) q = q.andWhere({ purpose: filters.purpose });
       if (filters.status) q = q.andWhere({ status: filters.status });
-      if (filters.offset) q = q.offset(filters.offset);
-      const rows = await q.limit(filters.limit ?? 50);
-      return rows.map(toCamelCase);
+      const countRow = await q.clone().count('* as c').first();
+      const total = Number(countRow.c);
+      const rows = await q
+        .orderBy('created_at', 'desc')
+        .offset(filters.offset ?? 0)
+        .limit(filters.limit ?? 50);
+      return { rows: rows.map(toCamelCase), total };
     },
 
     async listByClub(clubId, filters, trx = db) {

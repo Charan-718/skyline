@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../../shared/middleware/requireAuth.js';
 import { validate } from '../../shared/middleware/validate.js';
-import { authorize } from '../../shared/middleware/authorize.js';
+import { AppError, assertFound } from '../../shared/errors.js';
 import { z } from 'zod';
 
 const eventIdParam = z.object({ eventId: z.string().uuid() });
@@ -13,25 +13,19 @@ export function createEventReportingRoutes({ eventReportService, authz, eventRep
     '/events/:eventId/report',
     requireAuth,
     validate({ params: eventIdParam }),
-    authorize(authz, {
-      role: 'TR',
-      resolveScope: async (req) => {
-        const event = await eventRepository.findById(req.params.eventId);
-        return { clubId: event?.clubId, eventId: req.params.eventId };
-      },
-    }),
     async (req, res, next) => {
       try {
-        const event = await eventRepository.findById(req.params.eventId);
+        const eventId = req.valid.params.eventId;
+        const event = await eventRepository.findById(eventId);
+        assertFound(event, 'Event not found');
         const allowed =
           (await authz.isTreasurer(req.userId, event.clubId)) ||
           (await authz.isClubHead(req.userId, event.clubId)) ||
-          (await authz.isOrganizer(req.userId, req.params.eventId));
+          (await authz.isOrganizer(req.userId, eventId));
         if (!allowed) {
-          const { AppError } = await import('../../shared/errors.js');
           return next(new AppError('FORBIDDEN', 403, 'Forbidden'));
         }
-        const report = await eventReportService.getEventReport(req.params.eventId);
+        const report = await eventReportService.getEventReport(eventId);
         res.json({ data: report });
       } catch (e) {
         next(e);

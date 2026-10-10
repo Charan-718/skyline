@@ -11,9 +11,19 @@ import { formatDateTime } from '../../utils/dates';
 export default function Duties() {
   const { organizerOf, staffOf } = useAuth();
   const ids = [...new Set([...organizerOf, ...staffOf])];
-  const results = useQueries({ queries: ids.map((id) => ({ queryKey: ['event', id], queryFn: () => eventsApi.get(id) })) });
+  const results = useQueries({
+    queries: ids.map((id) => ({
+      queryKey: ['event', id],
+      queryFn: () => eventsApi.get(id),
+      retry: false,
+      enabled: Boolean(id),
+    })),
+  });
   const loading = results.some((r) => r.isPending);
-  const events = results.filter((r) => r.data).map((r) => r.data).sort((a, b) => (a.startsAt < b.startsAt ? 1 : -1));
+  const events = results
+    .filter((r) => r.isSuccess && r.data)
+    .map((r) => r.data)
+    .sort((a, b) => (a.startsAt < b.startsAt ? 1 : -1));
   return (
     <>
       <PageHeader title="Event duties" description="Events you organize or staff. Open the scanner at the door." />

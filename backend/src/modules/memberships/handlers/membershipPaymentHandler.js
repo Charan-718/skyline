@@ -42,18 +42,9 @@ export function createMembershipPaymentHandler({
       });
 
     const category = term.kind === 'JOIN' ? 'MEMBERSHIP_DUES' : 'MEMBERSHIP_RENEWAL';
-    await ledgerService.post(trx, {
-      clubId: term.clubId,
-      direction: 'IN',
-      category,
-      amountPaise: Number(payment.amountPaise),
-      sourceType: 'PAYMENT',
-      sourceId: payment.id,
-      paymentId: payment.id,
+    await ledgerService.postPaymentIncome(trx, payment, {
       membershipId: membership.id,
-      payerUserId: payment.userId,
       description: `${category} payment ${payment.reference}`,
-      reference: payment.reference,
     });
 
     if (term.source === 'AUTOPAY') {

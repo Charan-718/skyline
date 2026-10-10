@@ -53,6 +53,7 @@ describe('finance report (LLD §4.10)', () => {
       period: { from: null, to: null },
       totalIncomePaise: 70000,
       incomeByCategory: { MEMBERSHIP_DUES: 50000, MEMBERSHIP_RENEWAL: 0, TICKET_SALE: 0, MERCH_SALE: 0, FUNDRAISER_INCOME: 20000 },
+      outByCategory: { REIMBURSEMENT_PAYOUT: 25000, DIRECT_EXPENSE: 12000 },
       totalPaidExpensesPaise: 37000,
       availableBalancePaise: 33000,
       approvedUnpaidTotalPaise: 8000,

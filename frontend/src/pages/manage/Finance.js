@@ -50,7 +50,7 @@ function Overview({ clubId, lead }) {
                 )}
               </Card>
               <Card title="Income by source">
-                <Donut data={Object.entries(s.incomeByCategory).map(([k, v]) => ({ label: LABELS.ledgerCategory[k], value: v })).sort((a, b) => b.value - a.value).slice(0, 5)} format={(v) => formatMoney(v)} caption="Income by category" height={170} />
+                <Donut data={Object.entries(s.incomeByCategory ?? {}).map(([k, v]) => ({ label: LABELS.ledgerCategory[k], value: v })).sort((a, b) => b.value - a.value).slice(0, 5)} format={(v) => formatMoney(v)} caption="Income by category" height={170} />
               </Card>
             </div>
           </div>

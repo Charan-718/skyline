@@ -11,3 +11,9 @@ export const createAnnouncementBody = z.object({
   sendEmail: z.boolean().optional(),
   eventId: z.string().uuid().optional().nullable(),
 });
+
+export const updateAnnouncementBody = createAnnouncementBody.partial();
+
+export const deliveriesQuery = z.object({
+  status: z.string().optional(),
+});

@@ -29,7 +29,7 @@ export default function Dashboard() {
 
   const s = summary.data;
   const upcoming = (events.data || []).filter((e) => e.status === 'PUBLISHED').sort((a, b) => (a.startsAt < b.startsAt ? -1 : 1));
-  const incomeDonut = s ? Object.entries(s.incomeByCategory).map(([k, v]) => ({ label: LABELS.ledgerCategory[k], value: v })).sort((a, b) => b.value - a.value) : [];
+  const incomeDonut = s ? Object.entries(s.incomeByCategory ?? {}).map(([k, v]) => ({ label: LABELS.ledgerCategory[k], value: v })).sort((a, b) => b.value - a.value) : [];
 
   return (
     <>

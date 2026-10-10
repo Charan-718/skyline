@@ -1,4 +1,5 @@
 import { toCamelCase } from '../../shared/caseMap.js';
+import { todayIST } from '../../shared/clock.js';
 import { effectiveMembershipStatus } from './domain/membershipStateMachine.js';
 
 export function createMembershipRepository({ db }) {
@@ -27,7 +28,7 @@ export function createMembershipRepository({ db }) {
       return toCamelCase(m);
     },
 
-    async updateMembership(id, patch, trx) {
+    async updateMembership(id, patch, trx = db) {
       const [m] = await trx('memberships').where({ id }).update(patch).returning('*');
       return m ? toCamelCase(m) : null;
     },
@@ -93,5 +94,49 @@ export function createMembershipRepository({ db }) {
         .select('user_id');
       return rows.map((r) => r.user_id);
     },
+
+    async listClubMemberships(clubId, filters, trx = db) {
+      let q = trx('memberships as m')
+        .join('users as u', 'u.id', 'm.user_id')
+        .where('m.club_id', clubId);
+      if (filters.planId) q = q.andWhere('m.current_plan_id', filters.planId);
+      if (filters.status) {
+        if (filters.status === 'ACTIVE') {
+          q = q.andWhere('m.status', 'ACTIVE').andWhere('m.expires_on', '>=', todayIST());
+        } else if (filters.status === 'EXPIRED') {
+          q = q.andWhere((b) =>
+            b.where('m.status', 'EXPIRED').orWhere((b2) =>
+              b2.where('m.status', 'ACTIVE').andWhere('m.expires_on', '<', todayIST()),
+            ),
+          );
+        } else {
+          q = q.andWhere('m.status', filters.status);
+        }
+      }
+      if (filters.q) {
+        const like = `%${filters.q}%`;
+        q = q.andWhere((b) =>
+          b.whereILike('u.full_name', like).orWhereILike('u.email', like).orWhereILike('m.member_number', like),
+        );
+      }
+      if (filters.expiringWithin) {
+        const until = addDays(todayIST(), Number(filters.expiringWithin));
+        q = q.andWhere('m.status', 'ACTIVE').andWhereBetween('m.expires_on', [todayIST(), until]);
+      }
+      const countRow = await q.clone().count('* as c').first();
+      const total = Number(countRow.c);
+      const rows = await q
+        .orderBy('u.full_name')
+        .offset(filters.offset ?? 0)
+        .limit(filters.limit ?? 20)
+        .select('m.*', 'u.full_name', 'u.email');
+      return { rows, total };
+    },
   };
+}
+
+function addDays(dateStr, days) {
+  const d = new Date(`${dateStr}T12:00:00+05:30`);
+  d.setDate(d.getDate() + days);
+  return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 }

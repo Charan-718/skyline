@@ -15,7 +15,7 @@ let ids = {};
 beforeAll(async () => {
   window.localStorage.clear();
   resetDemo();
-  await call('POST', '/auth/login', { email: 'asha@srkrec.ac.in', password: 'demo1234' });
+  await call('POST', '/auth/login', { email: 'asha@skyline.ac.in', password: 'demo1234' });
   const clubs = (await call('GET', '/clubs')).body.data;
   const sky = clubs.find((c) => c.slug === 'skyline');
   const events = (await call('GET', `/clubs/${sky.id}/events`)).body.data;
@@ -111,7 +111,7 @@ test('every route renders without errors for a club head', async () => {
 });
 
 test('volunteer sees finance summary but not ledger tabs; non-member sees access message', async () => {
-  await call('POST', '/auth/login', { email: 'meera@srkrec.ac.in', password: 'demo1234' });
+  await call('POST', '/auth/login', { email: 'meera@skyline.ac.in', password: 'demo1234' });
   let view = renderAt(`/manage/${ids.club}/finance`);
   await screen.findByRole('heading', { level: 1, name: /^finance$/i });
   expect(await screen.findByText(/line-by-line transactions/i)).toBeInTheDocument();

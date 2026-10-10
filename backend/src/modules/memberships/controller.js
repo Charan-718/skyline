@@ -55,5 +55,30 @@ export function createMembershipController({ membershipService, plansService }) 
       const data = await membershipService.verifyMembershipQr(req.userId, req.body.qrPayload, req.requestId);
       res.json({ data });
     },
+
+    async detail(req, res) {
+      const data = await membershipService.getDetail(req.userId, req.params.membershipId);
+      res.json({ data });
+    },
+
+    async setAutopay(req, res) {
+      const data = await membershipService.setAutopay(req.userId, req.params.membershipId, req.body);
+      res.json({ data });
+    },
+
+    async clubMembers(req, res) {
+      const page = await membershipService.listClubMembers(req.userId, req.params.clubId, req.query);
+      res.json(page);
+    },
+
+    async updatePlan(req, res) {
+      const plan = await plansService.updatePlan(req.userId, req.params.planId, req.body);
+      res.json({ data: toCamelCase(plan) });
+    },
+
+    async archivePlan(req, res) {
+      const plan = await plansService.archivePlan(req.userId, req.params.planId);
+      res.json({ data: toCamelCase(plan) });
+    },
   };
 }

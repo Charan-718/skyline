@@ -9,6 +9,7 @@ import { PRICE_TIERS } from '../pricing/PricingPolicy.js';
 import { randomToken, ticketCode } from '../../shared/tokens.js';
 import { parsePagination, paginatedResponse } from '../../shared/pagination.js';
 import { presentEvent } from './eventPresenter.js';
+import { changedFields, patchToSnake } from './eventHelpers.js';
 
 export function createEventService({
   eventRepository,
@@ -19,6 +20,46 @@ export function createEventService({
   config: appConfig,
 }) {
   const holdMinutes = appConfig?.RESERVATION_HOLD_MINUTES ?? config.RESERVATION_HOLD_MINUTES;
+  const db = eventRepository.db;
+
+  async function canManageEvent(userId, event) {
+    if (!userId) return false;
+    return (
+      (await authz.isClubHead(userId, event.clubId)) || (await authz.isOrganizer(userId, event.id))
+    );
+  }
+
+  async function canViewEvent(userId, event) {
+    if (!['DRAFT', 'CANCELLED'].includes(event.status)) return true;
+    if (!userId) return false;
+    return (await canManageEvent(userId, event)) || (await authz.isStaff(userId, event.id));
+  }
+
+  async function presentFullEvent(event) {
+    const club = await db('clubs').where({ id: event.clubId }).first();
+    const ticketsSold = await db('tickets')
+      .where({ event_id: event.id })
+      .whereNot({ status: 'CANCELLED' })
+      .count('* as c')
+      .first();
+    const orgRows = await db('event_organizers as o')
+      .join('users as u', 'u.id', 'o.user_id')
+      .where('o.event_id', event.id)
+      .select('o.user_id', 'u.full_name');
+    return presentEvent(event, {
+      clubName: club?.name ?? null,
+      clubSlug: club?.slug ?? null,
+      ticketsSold: Number(ticketsSold?.c ?? 0),
+      organizers: orgRows.map((o) => ({ userId: o.user_id, fullName: o.full_name })),
+      pricingPolicy,
+    });
+  }
+
+  async function requireManageOr404(userId, event) {
+    if (!(await canManageEvent(userId, event))) {
+      throw new AppError('NOT_FOUND', 404, 'Event not found');
+    }
+  }
 
   return {
     async listEvents(query) {
@@ -46,26 +87,55 @@ export function createEventService({
       return paginatedResponse(data, page, pageSize, total);
     },
 
-    async getEvent(eventId) {
+    async getEvent(eventId, viewerUserId = null) {
       const event = await eventRepository.findById(eventId);
       assertFound(event, 'Event not found');
-      const club = await eventRepository.db('clubs').where({ id: event.clubId }).first();
-      const ticketsSold = await eventRepository.db('tickets')
-        .where({ event_id: eventId })
-        .whereNot({ status: 'CANCELLED' })
-        .count('* as c')
-        .first();
-      const orgRows = await eventRepository.db('event_organizers as o')
-        .join('users as u', 'u.id', 'o.user_id')
-        .where('o.event_id', eventId)
-        .select('o.user_id', 'u.full_name');
-      return presentEvent(event, {
-        clubName: club?.name ?? null,
-        clubSlug: club?.slug ?? null,
-        ticketsSold: Number(ticketsSold?.c ?? 0),
-        organizers: orgRows.map((o) => ({ userId: o.user_id, fullName: o.full_name })),
-        pricingPolicy,
-      });
+      if (!(await canViewEvent(viewerUserId, event))) {
+        throw new AppError('NOT_FOUND', 404, 'Event not found');
+      }
+      const view = await presentFullEvent(event);
+      if (viewerUserId) {
+        view.viewerCanManage = await canManageEvent(viewerUserId, event);
+        view.viewerIsClubHead = await authz.isClubHead(viewerUserId, event.clubId);
+        view.viewerCanScan =
+          view.viewerCanManage ||
+          (await authz.isStaff(viewerUserId, eventId)) ||
+          (await authz.isOrganizer(viewerUserId, eventId));
+        const booking = await eventRepository.findLiveBooking(eventId, viewerUserId);
+        if (booking) {
+          const ticket = await db('tickets').where({ booking_id: booking.id }).first();
+          const payment = await db('payments').where({ booking_id: booking.id }).first();
+          view.viewerBooking = {
+            id: booking.id,
+            status: booking.status,
+            ticketId: ticket?.id ?? null,
+            paymentId: payment?.id ?? null,
+          };
+        }
+      }
+      return view;
+    },
+
+    async listClubEvents(viewerUserId, clubId, query) {
+      const rows = await eventRepository.listByClub(clubId);
+      const all = query.all === 'true' || query.all === true;
+      const head = viewerUserId ? await authz.isClubHead(viewerUserId, clubId) : false;
+      const filtered = [];
+      for (const e of rows) {
+        const org = viewerUserId ? await authz.isOrganizer(viewerUserId, e.id) : false;
+        if (all && (head || org)) filtered.push(e);
+        else if (['PUBLISHED', 'COMPLETED'].includes(e.status)) filtered.push(e);
+      }
+      const ticketCounts = await eventRepository.countTicketsForEvents(filtered.map((r) => r.id));
+      return filtered.map((row) =>
+        presentEvent(row, {
+          clubName: row.clubName ?? null,
+          clubSlug: row.clubSlug ?? null,
+          ticketsSold: ticketCounts[row.id] ?? 0,
+          organizers: [],
+          pricingPolicy,
+        }),
+      );
     },
 
     async quote(actor, eventId) {
@@ -281,14 +351,226 @@ export function createEventService({
       const event = await eventRepository.findById(eventId);
       assertFound(event, 'Event not found');
       await authz.requireClubHead(actor.userId, event.clubId);
-      const orgs = await eventRepository.db('event_organizers').where({ event_id: eventId });
+      const orgs = await db('event_organizers').where({ event_id: eventId });
       if (orgs.length === 0) throw new AppError('ORGANIZER_REQUIRED', 422, 'Organizer required');
       assertTransition(event.status, 'publish');
-      return eventRepository.update(
+      const updated = await eventRepository.update(
         eventId,
         { status: 'PUBLISHED', published_at: now() },
-        eventRepository.db,
+        db,
       );
+      return presentFullEvent(updated);
+    },
+
+    async updateEvent(actor, eventId, body) {
+      const event = await eventRepository.findById(eventId);
+      assertFound(event, 'Event not found');
+      await requireManageOr404(actor.userId, event);
+      if (['CANCELLED', 'COMPLETED'].includes(event.status)) {
+        throw new AppError('CONFLICT_STATE', 409, 'Event cannot be edited', { currentStatus: event.status });
+      }
+      const changed = changedFields(event, body);
+      const head = await authz.isClubHead(actor.userId, event.clubId);
+      if (!head && changed.some((k) => !['description', 'venue'].includes(k))) {
+        throw new AppError('FIELD_NOT_EDITABLE', 403, 'Organizers may edit description and venue only');
+      }
+      if (body.capacity !== undefined && body.capacity < event.seatsReserved) {
+        throw new AppError('CAPACITY_BELOW_RESERVED', 422, 'Capacity below reserved seats', {
+          fields: { capacity: `Minimum ${event.seatsReserved}.` },
+        });
+      }
+      const patch = patchToSnake(body);
+      const updated = await eventRepository.update(eventId, patch, db);
+      return presentFullEvent(updated);
+    },
+
+    async cancelEvent(actor, eventId, reason) {
+      const event = await eventRepository.findById(eventId);
+      assertFound(event, 'Event not found');
+      await authz.requireClubHead(actor.userId, event.clubId);
+      if (!reason?.trim()) {
+        throw new AppError('VALIDATION_FAILED', 400, 'Cancellation reason required', {
+          fields: { reason: 'Required.' },
+        });
+      }
+      assertTransition(event.status, 'cancel');
+      let cancelledTickets = 0;
+      let cancelledBookings = 0;
+      await withTransaction(async (trx) => {
+        const bookings = await trx('bookings').where({ event_id: eventId });
+        for (const b of bookings) {
+          if (b.status === 'PENDING_PAYMENT') {
+            const pay = await trx('payments')
+              .where({ booking_id: b.id })
+              .whereIn('status', ['INITIATED', 'PENDING'])
+              .first();
+            if (pay) {
+              await paymentService.settle(pay.id, 'FAILED', trx, { failureReason: 'EVENT_CANCELLED' });
+            }
+            cancelledBookings += 1;
+          } else if (b.status === 'CONFIRMED') {
+            await trx('bookings').where({ id: b.id }).update({ status: 'CANCELLED', cancelled_at: now() });
+            const tk = await trx('tickets')
+              .where({ booking_id: b.id, status: 'VALID' })
+              .update({ status: 'CANCELLED', cancelled_at: now() });
+            cancelledTickets += tk;
+            cancelledBookings += 1;
+            await eventRepository.releaseSeat(eventId, b.uses_early_bird, trx);
+          }
+        }
+        await eventRepository.update(
+          eventId,
+          { status: 'CANCELLED', cancel_reason: reason.trim(), cancelled_at: now() },
+          trx,
+        );
+      });
+      const updated = await eventRepository.findById(eventId);
+      return { cancelledTickets, cancelledBookings, event: await presentFullEvent(updated) };
+    },
+
+    async completeEvent(actor, eventId) {
+      const event = await eventRepository.findById(eventId);
+      assertFound(event, 'Event not found');
+      await requireManageOr404(actor.userId, event);
+      assertTransition(event.status, 'complete');
+      if (new Date(event.endsAt) > now()) {
+        throw new AppError('EVENT_NOT_ENDED', 422, 'Event has not ended yet');
+      }
+      const updated = await eventRepository.update(eventId, { status: 'COMPLETED', completed_at: now() }, db);
+      return presentFullEvent(updated);
+    },
+
+    async listOrganizers(actor, eventId) {
+      const event = await eventRepository.findById(eventId);
+      assertFound(event, 'Event not found');
+      await requireManageOr404(actor.userId, event);
+      return eventRepository.listOrganizers(eventId);
+    },
+
+    async setOrganizers(actor, eventId, userIds) {
+      const event = await eventRepository.findById(eventId);
+      assertFound(event, 'Event not found');
+      await authz.requireClubHead(actor.userId, event.clubId);
+      const ids = [...new Set(userIds ?? [])];
+      if (event.status === 'PUBLISHED' && ids.length === 0) {
+        throw new AppError('ORGANIZER_REQUIRED', 422, 'Organizer required');
+      }
+      for (const id of ids) {
+        const u = await db('users').where({ id }).first();
+        if (!u) throw new AppError('USER_NOT_FOUND', 422, 'User not found');
+      }
+      return eventRepository.replaceOrganizers(eventId, ids, actor.userId, db);
+    },
+
+    async listStaff(actor, eventId) {
+      const event = await eventRepository.findById(eventId);
+      assertFound(event, 'Event not found');
+      await requireManageOr404(actor.userId, event);
+      const staff = await eventRepository.listEventStaff(eventId);
+      const candidates = await eventRepository.listVolunteerCandidates(event.clubId);
+      return { staff, candidates };
+    },
+
+    async addStaff(actor, eventId, userId) {
+      const event = await eventRepository.findById(eventId);
+      assertFound(event, 'Event not found');
+      await requireManageOr404(actor.userId, event);
+      if (!(await authz.isVolunteer(userId, event.clubId))) {
+        throw new AppError('NOT_CLUB_VOLUNTEER', 422, 'User must be a club volunteer');
+      }
+      await eventRepository.addEventStaff(eventId, event.clubId, userId, actor.userId, db);
+      const u = await db('users').where({ id: userId }).first();
+      return { userId, fullName: u.full_name };
+    },
+
+    async removeStaff(actor, eventId, userId) {
+      const event = await eventRepository.findById(eventId);
+      assertFound(event, 'Event not found');
+      await requireManageOr404(actor.userId, event);
+      await eventRepository.removeEventStaff(eventId, userId, db);
+    },
+
+    async listBookings(actor, eventId, query) {
+      const event = await eventRepository.findById(eventId);
+      assertFound(event, 'Event not found');
+      const allowed =
+        (await canManageEvent(actor.userId, event)) ||
+        (await authz.isTreasurer(actor.userId, event.clubId));
+      if (!allowed) throw new AppError('NOT_FOUND', 404, 'Event not found');
+      const { page, pageSize, offset } = parsePagination(query, { page: 1, pageSize: 20, maxPageSize: 100 });
+      const { rows, total } = await eventRepository.listBookingsForEvent(eventId, {
+        status: query.status,
+        buyerType: query.buyerType,
+        q: query.q,
+        offset,
+        limit: pageSize,
+      });
+      return paginatedResponse(rows, page, pageSize, total);
+    },
+
+    async listMyTickets(userId) {
+      const tickets = await eventRepository.listTicketsForUser(userId);
+      const pending = await db('bookings')
+        .where({ user_id: userId, status: 'PENDING_PAYMENT' })
+        .orderBy('created_at', 'desc');
+      const items = [];
+      for (const b of pending) {
+        const ev = await eventRepository.findById(b.event_id);
+        if (!ev) continue;
+        const payment = await db('payments').where({ booking_id: b.id }).first();
+        items.push({
+          id: b.id,
+          status: 'PENDING_PAYMENT',
+          pending: true,
+          paymentId: payment?.id ?? null,
+          holdExpiresAt: b.hold_expires_at,
+          event: await presentFullEvent(await eventRepository.findById(b.event_id)),
+          booking: await eventRepository.findBooking(b.id),
+        });
+      }
+      for (const t of tickets) {
+        const ev = await eventRepository.findById(t.eventId);
+        const booking = await eventRepository.findBooking(t.bookingId);
+        items.push({
+          ...t,
+          qrToken: undefined,
+          event: ev ? await presentFullEvent(ev) : null,
+          booking,
+        });
+      }
+      items.sort((a, b) => {
+        const aStart = a.event?.startsAt ?? '';
+        const bStart = b.event?.startsAt ?? '';
+        return aStart < bStart ? 1 : -1;
+      });
+      return items;
+    },
+
+    async getMyTicket(userId, ticketId) {
+      const t = await eventRepository.findTicketByIdForUser(ticketId, userId);
+      assertFound(t, 'Ticket not found');
+      const ev = await eventRepository.findById(t.eventId);
+      const booking = await eventRepository.findBooking(t.bookingId);
+      const user = await db('users').where({ id: userId }).first();
+      return {
+        id: t.id,
+        ticketCode: t.ticketCode,
+        status: t.status,
+        usedAt: t.usedAt,
+        event: ev ? await presentFullEvent(ev) : null,
+        booking,
+        holderName: user?.full_name,
+        qrPayload: t.status === 'VALID' ? buildTicketQrPayload(t.qrToken) : null,
+      };
+    },
+
+    async listCheckIns(actor, eventId) {
+      const event = await eventRepository.findById(eventId);
+      assertFound(event, 'Event not found');
+      const allowed =
+        (await canManageEvent(actor.userId, event)) || (await authz.isStaff(actor.userId, eventId));
+      if (!allowed) throw new AppError('NOT_EVENT_STAFF', 403, 'Not event staff');
+      return eventRepository.listCheckIns(eventId);
     },
   };
 }

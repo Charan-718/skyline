@@ -24,7 +24,7 @@ export async function truncateTestDb() {
       event_staff, event_organizers, events, renewal_attempts, autopay_consents,
       membership_terms, memberships, membership_plans, payments, financial_transactions,
       idempotency_keys, audit_logs, job_runs, college_verifications,
-      club_role_assignments, clubs, user_sessions, users
+      college_student_roster, club_role_assignments, clubs, user_sessions, users
     RESTART IDENTITY CASCADE
   `);
 }

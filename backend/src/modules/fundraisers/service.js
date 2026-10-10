@@ -34,10 +34,13 @@ export function createFundraiserService({ db, clock, access, clubs, auth, fundra
   /** Club-role list with progressPct and health per fundraiser (LLD §4.8 TEAM; organizers excluded, OQ-38). */
   async function list(clubId, query) {
     const fundraisers = await repository.listFundraisers(db, clubId, query);
-    const tasks = await repository.listTasksOfFundraisers(db, fundraisers.map((f) => f.id));
+    const ids = fundraisers.map((f) => f.id);
+    const tasks = await repository.listTasksOfFundraisers(db, ids);
+    const moneyById = ids.length ? await fundraiserMoney(ids) : new Map();
     return fundraisers.map((f) => {
       const p = progressOf(f, tasks.filter((t) => t.fundraiser_id === f.id));
-      return { fundraiser: f, progressPct: p.progressPct, health: p.health };
+      const money = computeMoney(f, moneyById.get(f.id) ?? { income: 0, expensesPaid: 0 });
+      return { fundraiser: f, progress: p, money };
     });
   }
 

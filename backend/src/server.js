@@ -1,3 +1,4 @@
+// Entry point (dev: node --watch src/server.js).
 import { createContainer } from './container.js';
 import { createApp } from './app.js';
 import { config } from './config/index.js';

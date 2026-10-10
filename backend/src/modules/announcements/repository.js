@@ -35,6 +35,15 @@ export function createAnnouncementRepository({ db }) {
       return a ? toCamelCase(a) : null;
     },
 
+    async deleteDraft(id, trx = db) {
+      return trx('announcements').where({ id, status: 'DRAFT' }).del();
+    },
+
+    async listForClub(clubId, trx = db) {
+      const rows = await trx('announcements').where({ club_id: clubId }).orderBy('created_at', 'desc');
+      return rows.map(toCamelCase);
+    },
+
     async listPublished(filters, trx = db) {
       let q = trx('announcements').where({ status: 'PUBLISHED' });
       if (filters.clubId) q = q.andWhere({ club_id: filters.clubId });

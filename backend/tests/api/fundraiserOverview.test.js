@@ -53,7 +53,7 @@ describe('fundraiser overview (T-71)', () => {
     expect(d.health).toBe('OFF_TRACK'); // overdue task
     expect(d.counts).toEqual({ todo: 0, inProgress: 1, done: 1, cancelled: 0, overdue: 1 });
     expect(d.tasks.find((t) => t.id === overdue.id)).toMatchObject({ overdue: true, assignee: { id: volunteer.id, fullName: 'Vol One' } });
-    expect(d.money).toEqual({ income: 100000, expensesPaid: 0, net: 100000, goalPct: 33 });
+    expect(d.money).toEqual({ incomePaise: 100000, expensesPaidPaise: 0, netPaise: 100000, goalPct: 33 });
   });
 
   it('money counts OUT rows linked to the fundraiser as expensesPaid', async () => {
@@ -72,7 +72,7 @@ describe('fundraiser overview (T-71)', () => {
     );
     await income(f, 10000);
     const res = await (await ctx.signIn(club.head.id)).get(`/api/v1/fundraisers/${f.id}/overview`);
-    expect(res.body.data.money).toEqual({ income: 10000, expensesPaid: 15000, net: -5000, goalPct: null });
+    expect(res.body.data.money).toEqual({ incomePaise: 10000, expensesPaidPaise: 15000, netPaise: -5000, goalPct: null });
     expect(res.body.data.health).toBe('NO_TASKS');
   });
 

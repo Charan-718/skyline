@@ -12,13 +12,40 @@ import { formatDate, formatMonth } from '../../utils/dates';
 import { formatMoney, formatPercent } from '../../utils/money';
 import { LABELS, sizeLabel } from '../../utils/status';
 
+function categoryMapFromBreakdown(rows) {
+  if (!Array.isArray(rows)) return {};
+  return Object.fromEntries(rows.map((row) => [row.category, Number(row.totalPaise) || 0]));
+}
+
+function normalizeFinanceReport(raw) {
+  const breakdown = raw?.categoryBreakdown;
+  return {
+    totalIncomePaise: raw?.totalIncomePaise ?? 0,
+    totalPaidExpensesPaise: raw?.totalPaidExpensesPaise ?? 0,
+    availableBalancePaise: raw?.availableBalancePaise ?? 0,
+    projectedBalancePaise: raw?.projectedBalancePaise ?? 0,
+    monthly: raw?.monthly ?? [],
+    incomeByCategory: raw?.incomeByCategory ?? categoryMapFromBreakdown(breakdown?.IN),
+    outByCategory: raw?.outByCategory ?? categoryMapFromBreakdown(breakdown?.OUT),
+  };
+}
+
 function EventsReport({ clubId }) {
   const q = useQuery({ queryKey: ['reports', 'events', clubId], queryFn: () => reportsApi.events(clubId) });
   return (
     <QueryState query={q} loading={<CardsSkeleton />} empty={<div className="card"><EmptyState icon={CalendarBlank} title="No events to report on" /></div>}>
       {(rows) => {
-        const sorted = [...rows].sort((a, b) => (a.startsAt < b.startsAt ? 1 : -1));
-        const totals = rows.reduce((t, r) => ({ sold: t.sold + r.ticketsSold, checked: t.checked + r.checkedIn, rev: t.rev + r.grossRecordedRevenuePaise, net: t.net + r.eventNetPaise }), { sold: 0, checked: 0, rev: 0, net: 0 });
+        const normalized = rows.map((r) => ({
+          ...r,
+          memberVsNonMember: r.memberVsNonMember ?? { MEMBER: 0, NON_MEMBER: 0 },
+          expensesPaidPaise: r.expensesPaidPaise ?? 0,
+          eventNetPaise: r.eventNetPaise ?? 0,
+          grossRecordedRevenuePaise: r.grossRecordedRevenuePaise ?? 0,
+          ticketsSold: r.ticketsSold ?? 0,
+          checkedIn: r.checkedIn ?? 0,
+        }));
+        const sorted = [...normalized].sort((a, b) => (a.startsAt < b.startsAt ? 1 : -1));
+        const totals = normalized.reduce((t, r) => ({ sold: t.sold + r.ticketsSold, checked: t.checked + r.checkedIn, rev: t.rev + r.grossRecordedRevenuePaise, net: t.net + r.eventNetPaise }), { sold: 0, checked: 0, rev: 0, net: 0 });
         return (
           <div className="stack-lg">
             <div className="grid grid-4">
@@ -39,7 +66,7 @@ function EventsReport({ clubId }) {
                   { key: 'title', header: 'Event', sortable: true, render: (r) => <div><Link to={`/manage/events/${r.eventId}`} className="cell-title">{r.title}</Link><div className="cell-sub">{formatDate(r.startsAt)}</div></div> },
                   { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
                   { key: 'ticketsSold', header: 'Sold', align: 'right', sortable: true, render: (r) => `${r.ticketsSold}/${r.capacity}` },
-                  { key: 'members', header: 'Member / non', align: 'right', hideOnMobile: true, render: (r) => `${r.memberVsNonMember.MEMBER} / ${r.memberVsNonMember.NON_MEMBER}` },
+                  { key: 'members', header: 'Member / non', align: 'right', hideOnMobile: true, render: (r) => `${r.memberVsNonMember?.MEMBER ?? 0} / ${r.memberVsNonMember?.NON_MEMBER ?? 0}` },
                   { key: 'attendanceRate', header: 'Attendance', align: 'right', sortable: true, render: (r) => formatPercent(r.attendanceRate) },
                   { key: 'grossRecordedRevenuePaise', header: 'Revenue', align: 'right', sortable: true, render: (r) => <Money paise={r.grossRecordedRevenuePaise} /> },
                   { key: 'eventNetPaise', header: 'Net', align: 'right', sortable: true, render: (r) => <Money paise={r.eventNetPaise} /> },
@@ -70,7 +97,7 @@ function MembershipReport({ clubId }) {
               <BarSeries data={r.monthly} xKey="month" xFormat={formatMonth} caption="Joins and renewals per month" series={[{ key: 'joins', label: 'New members' }, { key: 'renewals', label: 'Renewals', colorIndex: 1 }]} stacked />
             </Card>
             <Card title="Active members by plan">
-              <Donut data={r.byPlan.map((p) => ({ label: p.planName, value: p.activeMembers }))} caption="Active members by plan" />
+              <Donut data={(r.byPlan ?? []).map((p) => ({ label: p.planName, value: p.activeMembers }))} caption="Active members by plan" />
             </Card>
           </div>
           <Card title="Status breakdown">
@@ -110,7 +137,7 @@ function MerchReport({ clubId }) {
               />
             </Card>
             <Card title="Orders by status">
-              <Donut data={Object.entries(r.ordersByStatus).map(([k, v]) => ({ label: k.replace('_', ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase()), value: v }))} caption="Orders by status" />
+              <Donut data={Object.entries(r.ordersByStatus ?? {}).map(([k, v]) => ({ label: k.replace('_', ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase()), value: v }))} caption="Orders by status" />
             </Card>
           </div>
         </div>
@@ -123,27 +150,30 @@ function FinanceReport({ clubId }) {
   const q = useQuery({ queryKey: ['reports', 'finance', clubId], queryFn: () => reportsApi.finance(clubId) });
   return (
     <QueryState query={q} loading={<CardsSkeleton />}>
-      {(r) => (
-        <div className="stack-lg">
-          <div className="grid grid-4">
-            <StatCard label="Total income" value={<Money paise={r.totalIncomePaise} />} tone="success" />
-            <StatCard label="Expenses paid" value={<Money paise={r.totalPaidExpensesPaise} />} tone="accent" />
-            <StatCard label="Available balance" value={<Money paise={r.availableBalancePaise} />} />
-            <StatCard label="Projected balance" value={<Money paise={r.projectedBalancePaise} />} tone="info" hint="After approved, unpaid claims" />
-          </div>
-          <Card title="Monthly income and expenses">
-            <BarSeries data={r.monthly} xKey="month" xFormat={formatMonth} format={(v, axis) => formatMoney(v, { compact: axis })} caption="Monthly income and expenses" series={[{ key: 'inPaise', label: 'Income' }, { key: 'outPaise', label: 'Expenses', colorIndex: 2 }]} />
-          </Card>
-          <div className="grid grid-2">
-            <Card title="Income by category">
-              <Donut data={Object.entries(r.incomeByCategory).map(([k, v]) => ({ label: LABELS.ledgerCategory[k], value: v })).sort((a, b) => b.value - a.value).slice(0, 5)} format={(v) => formatMoney(v)} caption="Income by category" />
+      {(raw) => {
+        const r = normalizeFinanceReport(raw);
+        return (
+          <div className="stack-lg">
+            <div className="grid grid-4">
+              <StatCard label="Total income" value={<Money paise={r.totalIncomePaise} />} tone="success" />
+              <StatCard label="Expenses paid" value={<Money paise={r.totalPaidExpensesPaise} />} tone="accent" />
+              <StatCard label="Available balance" value={<Money paise={r.availableBalancePaise} />} />
+              <StatCard label="Projected balance" value={<Money paise={r.projectedBalancePaise} />} tone="info" hint="After approved, unpaid claims" />
+            </div>
+            <Card title="Monthly income and expenses">
+              <BarSeries data={r.monthly} xKey="month" xFormat={formatMonth} format={(v, axis) => formatMoney(v, { compact: axis })} caption="Monthly income and expenses" series={[{ key: 'inPaise', label: 'Income' }, { key: 'outPaise', label: 'Expenses', colorIndex: 2 }]} />
             </Card>
-            <Card title="Expenses by category">
-              <Donut data={Object.entries(r.outByCategory).map(([k, v]) => ({ label: LABELS.ledgerCategory[k], value: v }))} format={(v) => formatMoney(v)} caption="Expenses by category" />
-            </Card>
+            <div className="grid grid-2">
+              <Card title="Income by category">
+                <Donut data={Object.entries(r.incomeByCategory).map(([k, v]) => ({ label: LABELS.ledgerCategory[k], value: v })).sort((a, b) => b.value - a.value).slice(0, 5)} format={(v) => formatMoney(v)} caption="Income by category" />
+              </Card>
+              <Card title="Expenses by category">
+                <Donut data={Object.entries(r.outByCategory).map(([k, v]) => ({ label: LABELS.ledgerCategory[k], value: v }))} format={(v) => formatMoney(v)} caption="Expenses by category" />
+              </Card>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      }}
     </QueryState>
   );
 }
