@@ -1,12 +1,10 @@
 /**
- * College roster for dev is `students.mock.json` (mock college DB), not PostgreSQL.
+ * Legacy placeholder — demo data lives in `002_demo_engagement.js` (aligned with frontend mock seed).
  *
- * Verification is never pre-seeded: users become VERIFIED only when
- * POST /auth/register (college-domain email + roster match) or
- * POST /me/college-verification succeeds.
+ * College roster for verification: `004_college_roster.js` → `college_student_roster` (see docs/COLLEGE_ROSTER_API.md).
  *
  * @param {import('knex').Knex} _knex
  */
 export async function seed(_knex) {
-  // Intentionally empty — use register/login against the mock roster (see fixtures/README.md).
+  // No-op; run `npm run seed` to apply 002 after migrations.
 }

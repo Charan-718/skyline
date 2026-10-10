@@ -11,6 +11,10 @@ import {
   renewMembershipBody,
   createPlanBody,
   verifyMembershipBody,
+  updatePlanBody,
+  autopayBody,
+  clubMembersQuery,
+  planIdParam,
 } from './schemas.js';
 
 export function createMembershipRoutes({ membershipController, authz }) {
@@ -43,6 +47,44 @@ export function createMembershipRoutes({ membershipController, authz }) {
   );
 
   router.get('/me/memberships', requireAuth, membershipController.listMine);
+
+  router.get(
+    '/me/memberships/:membershipId',
+    requireAuth,
+    validate({ params: membershipIdParam }),
+    membershipController.detail,
+  );
+
+  router.put(
+    '/me/memberships/:membershipId/autopay',
+    requireAuth,
+    csrfHeader,
+    validate({ params: membershipIdParam, body: autopayBody }),
+    membershipController.setAutopay,
+  );
+
+  router.get(
+    '/clubs/:clubId/memberships',
+    requireAuth,
+    validate({ params: clubIdParam, query: clubMembersQuery }),
+    membershipController.clubMembers,
+  );
+
+  router.patch(
+    '/plans/:planId',
+    requireAuth,
+    csrfHeader,
+    validate({ params: planIdParam, body: updatePlanBody }),
+    membershipController.updatePlan,
+  );
+
+  router.post(
+    '/plans/:planId/archive',
+    requireAuth,
+    csrfHeader,
+    validate({ params: planIdParam }),
+    membershipController.archivePlan,
+  );
 
   router.post(
     '/me/memberships/:membershipId/renewals',

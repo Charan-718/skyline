@@ -1,5 +1,9 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import '../../loadEnv.js';
 import { z } from 'zod';
+
+const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 if (!process.env.COLLEGE_EMAIL_DOMAINS && process.env.REGISTRATION_EMAIL_DOMAINS) {
   process.env.COLLEGE_EMAIL_DOMAINS = process.env.REGISTRATION_EMAIL_DOMAINS;
@@ -12,7 +16,13 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(1).optional(),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
   APP_TIMEZONE: z.string().default('Asia/Kolkata'),
-  UPLOAD_DIR: z.string().default('/app/uploads'),
+  UPLOAD_DIR: z
+    .string()
+    .default('uploads')
+    .transform((v) => {
+      const trimmed = v.trim();
+      return path.isAbsolute(trimmed) ? trimmed : path.resolve(backendRoot, trimmed);
+    }),
   MAX_UPLOAD_BYTES: z.coerce.number().default(5242880),
   RESERVATION_HOLD_MINUTES: z.coerce.number().default(15),
   AUTOPAY_PENDING_TIMEOUT_HOURS: z.coerce.number().default(24),
@@ -27,7 +37,7 @@ const envSchema = z.object({
         .map((d) => d.trim().toLowerCase())
         .filter(Boolean),
     ),
-  COLLEGE_VERIFICATION_MODE: z.enum(['mock', 'unconfigured']).default('mock'),
+  COLLEGE_VERIFICATION_MODE: z.enum(['mock', 'database', 'unconfigured']).default('database'),
   VERIFICATION_HASH_KEY: z.string().min(8).default('dev-key-change-me'),
   NOTIFY_MODE: z.enum(['dev', 'unconfigured']).default('dev'),
   DEV_NOTIFY_FAIL_CHANNEL: z.string().optional(),

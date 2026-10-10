@@ -11,6 +11,34 @@ export const checkInBody = z.object({
   qrPayload: z.string().min(1),
 });
 
+export const cancelEventBody = z.object({
+  reason: z.string().min(1),
+});
+
+export const organizersBody = z.object({
+  userIds: z.array(z.string().uuid()),
+});
+
+export const staffBody = z.object({
+  userId: z.string().uuid(),
+});
+
+export const userIdParam = z.object({ userId: z.string().uuid() });
+export const eventStaffParams = eventIdParam.merge(userIdParam);
+export const ticketIdParam = z.object({ ticketId: z.string().uuid() });
+
+export const clubEventsQuery = z.object({
+  all: z.enum(['true', 'false']).optional(),
+});
+
+export const bookingsQuery = z.object({
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+  status: z.string().optional(),
+  buyerType: z.string().optional(),
+  q: z.string().optional(),
+});
+
 export const createEventBody = z.object({
   title: z.string().min(1).max(150),
   description: z.string().optional(),
@@ -29,3 +57,5 @@ export const createEventBody = z.object({
   earlyBirdEndsAt: z.string().datetime().optional().nullable(),
   earlyBirdQuantity: z.coerce.number().int().positive().optional().nullable(),
 });
+
+export const updateEventBody = createEventBody.partial();

@@ -12,6 +12,9 @@ import {
   createMockCollegeVerificationAdapter,
   createUnconfiguredCollegeVerificationAdapter,
 } from './modules/auth/index.js';
+import { createCollegeRosterRepository } from './modules/collegeRoster/repository.js';
+import { createDbCollegeVerificationAdapter } from './modules/collegeRoster/DbCollegeVerificationAdapter.js';
+import { createCollegeRosterDevRoutes } from './modules/collegeRoster/devRoutes.js';
 
 import {
   createClubRepository,
@@ -61,7 +64,7 @@ import {
   createAnnouncementRoutes,
 } from './modules/announcements/index.js';
 
-import { createEventReportService, createEventReportingRoutes } from './modules/reporting/index.js';
+import { createEventReportService, createGroup1ReportingRoutes } from './modules/reporting/index.js';
 
 import { createMembershipExpiryJob } from './jobs/definitions/membershipExpiry.js';
 import { createRenewalRemindersJob } from './jobs/definitions/renewalReminders.js';
@@ -72,21 +75,32 @@ export function createContainer() {
   const auditRepository = createAuditRepository(db);
   const authz = createClubAuthz({ db });
 
+  const collegeRosterRepository = createCollegeRosterRepository({ db });
+
   const verificationAdapter =
     config.COLLEGE_VERIFICATION_MODE === 'mock'
       ? createMockCollegeVerificationAdapter()
-      : createUnconfiguredCollegeVerificationAdapter();
+      : config.COLLEGE_VERIFICATION_MODE === 'database'
+        ? createDbCollegeVerificationAdapter({ collegeRosterRepository })
+        : createUnconfiguredCollegeVerificationAdapter();
 
   const clubRepository = createClubRepository({ db });
   const authRepository = createAuthRepository({ db });
 
-  const clubService = createClubService({ clubRepository, authRepository, auditRepository, authz });
+  const clubService = createClubService({
+    clubRepository,
+    authRepository,
+    auditRepository,
+    authz,
+    collegeRosterRepository,
+  });
 
   const authService = createAuthService({
     authRepository,
     verificationAdapter,
     clubsModule: clubService,
     auditRepository,
+    collegeRosterRepository,
   });
 
   const ledgerService = createLedgerService({ db, logger });
@@ -105,6 +119,7 @@ export function createContainer() {
     handlerRegistry,
     ledgerService,
     config,
+    db,
   });
 
   const membershipService = createMembershipService({
@@ -177,12 +192,16 @@ export function createContainer() {
 
   const routes = {
     auth: createAuthRoutes({ authController }),
+    collegeRosterDev:
+      config.devToolsEnabled && config.COLLEGE_VERIFICATION_MODE === 'database'
+        ? createCollegeRosterDevRoutes({ collegeRosterRepository, config })
+        : null,
     clubs: createClubRoutes({ clubController, authz }),
     payments: createPaymentRoutes({ paymentController }),
     memberships: createMembershipRoutes({ membershipController, authz }),
     events: createEventRoutes({ eventController, authz }),
     announcements: createAnnouncementRoutes({ announcementController, authz }),
-    reporting: createEventReportingRoutes({ eventReportService, authz, eventRepository }),
+    reporting: createGroup1ReportingRoutes({ db, eventReportService, authz, eventRepository }),
   };
 
   const group2 = wireGroup2({ db, config, bridge: group1Bridge });

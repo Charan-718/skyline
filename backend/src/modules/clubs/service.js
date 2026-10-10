@@ -1,8 +1,9 @@
 import { AppError, assertFound } from '../../shared/errors.js';
 import { createAuditService } from '../../shared/audit.js';
 import { isClubHeadRegistrationEmail } from '../auth/verification/roster.js';
+import { config } from '../../config/index.js';
 
-export function createClubService({ clubRepository, authRepository, auditRepository, authz }) {
+export function createClubService({ clubRepository, authRepository, auditRepository, authz, collegeRosterRepository }) {
   const audit = createAuditService(auditRepository);
 
   async function requireVerifiedStudent(userId) {
@@ -17,7 +18,11 @@ export function createClubService({ clubRepository, authRepository, auditReposit
   }
 
   async function requireClubHeadEligibleUser(user) {
-    if (!isClubHeadRegistrationEmail(user.email)) {
+    const eligible =
+      collegeRosterRepository && config.COLLEGE_VERIFICATION_MODE === 'database'
+        ? await collegeRosterRepository.isClubHeadEligibleEmail(user.email)
+        : isClubHeadRegistrationEmail(user.email);
+    if (!eligible) {
       throw new AppError(
         'CLUB_HEAD_NOT_ELIGIBLE',
         403,
@@ -40,8 +45,8 @@ export function createClubService({ clubRepository, authRepository, auditReposit
       return { items, page, pageSize };
     },
 
-    async getClub(clubId) {
-      const club = await clubRepository.findById(clubId);
+    async getClub(clubRef) {
+      const club = await clubRepository.findByRef(clubRef);
       assertFound(club, 'Club not found');
       return club;
     },

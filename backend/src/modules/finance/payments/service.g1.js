@@ -3,12 +3,15 @@ import { AppError, assertFound } from '../../../shared/errors.js';
 import { randomReference } from '../../../shared/tokens.js';
 import { withTransaction } from '../../../db/transaction.js';
 import { toCamelCase } from '../../../shared/caseMap.js';
+import { presentPayment } from './presenter.js';
+import { paginatedResponse, parsePagination } from '../../../shared/pagination.js';
 
 /**
  * @typedef {{ purpose: string, onSucceeded: Function, onFailed: Function }} PaymentPurposeHandler
  */
 
-export function createPaymentService({ paymentRepository, handlerRegistry, ledgerService, config }) {
+export function createPaymentService({ paymentRepository, handlerRegistry, ledgerService, config, db }) {
+  const conn = db ?? paymentRepository.db;
   const terminal = new Set(['SUCCEEDED', 'FAILED', 'EXPIRED']);
 
   async function create(input, trx) {
@@ -72,7 +75,10 @@ export function createPaymentService({ paymentRepository, handlerRegistry, ledge
   }
 
   async function simulate(actorUserId, paymentId, outcome) {
-    return withTransaction(async (trx) => {
+    let settledPayment;
+    let handlerResult = null;
+
+    await withTransaction(async (trx) => {
       const payment = await paymentRepository.findByIdForUpdate(paymentId, trx);
       assertFound(payment, 'Payment not found');
       if (payment.userId !== actorUserId) {
@@ -82,14 +88,21 @@ export function createPaymentService({ paymentRepository, handlerRegistry, ledge
         throw new AppError('FORBIDDEN', 403, 'Use dev tools for AutoPay payments');
       }
       if (terminal.has(payment.status)) {
-        return { payment, result: null };
+        settledPayment = payment;
+        return;
       }
 
-      const { payment: settledPayment, handlerResult } = await settle(paymentId, outcome, trx, {
+      const out = await settle(paymentId, outcome, trx, {
         failureReason: outcome === 'FAILED' ? 'USER_SIMULATED_FAIL' : undefined,
       });
-      return { payment: settledPayment, result: handlerResult };
+      settledPayment = out.payment;
+      handlerResult = out.handlerResult;
     });
+
+    return {
+      payment: await presentPayment(conn, settledPayment),
+      result: handlerResult,
+    };
   }
 
   function decideAutopayOutcome() {
@@ -107,19 +120,19 @@ export function createPaymentService({ paymentRepository, handlerRegistry, ledge
       if (payment.userId !== actorUserId) {
         throw new AppError('FORBIDDEN', 403, 'Forbidden');
       }
-      return payment;
+      return presentPayment(conn, payment);
     },
 
     async listMine(userId, query = {}) {
-      const page = Math.max(1, Number(query.page) || 1);
-      const pageSize = Math.min(100, Math.max(1, Number(query.pageSize) || 20));
-      const rows = await paymentRepository.listByUser(userId, {
+      const { page, pageSize, offset } = parsePagination(query, { page: 1, pageSize: 20, maxPageSize: 100 });
+      const { rows, total } = await paymentRepository.listByUser(userId, {
         purpose: query.purpose,
         status: query.status,
         limit: pageSize,
-        offset: (page - 1) * pageSize,
+        offset,
       });
-      return { data: rows, page, pageSize, total: rows.length };
+      const data = await Promise.all(rows.map((r) => presentPayment(conn, r)));
+      return paginatedResponse(data, page, pageSize, total);
     },
   };
 }

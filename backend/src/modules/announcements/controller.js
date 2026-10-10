@@ -19,5 +19,25 @@ export function createAnnouncementController({ announcementService }) {
       const ann = await announcementService.get(req.params.id);
       res.json({ data: ann });
     },
+
+    async clubList(req, res) {
+      const rows = await announcementService.listForClub({ userId: req.userId }, req.params.clubId, req.query);
+      res.json({ data: rows });
+    },
+
+    async update(req, res) {
+      const ann = await announcementService.updateDraft({ userId: req.userId }, req.params.id, req.body);
+      res.json({ data: ann });
+    },
+
+    async remove(req, res) {
+      await announcementService.removeDraft({ userId: req.userId }, req.params.id);
+      res.status(204).send();
+    },
+
+    async deliveries(req, res) {
+      const data = await announcementService.listDeliveries({ userId: req.userId }, req.params.id, req.query);
+      res.json({ data });
+    },
   };
 }

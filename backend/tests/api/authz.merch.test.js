@@ -81,7 +81,7 @@ describe('TC-AZ-01 — merchandise, outbox, jobs', () => {
     'PATCH /variants/:id': ch(200),
     'POST /variants/:id/stock-adjustments': ch(200),
     'GET /clubs/:A/inventory': chTr(200),
-    'GET /clubs/:A/low-stock-alerts': ch(200),
+    'GET /clubs/:A/low-stock-alerts': chTr(200),
     'GET /clubs/:A/orders/quote': auth(200),
     'POST /clubs/:A/orders': auth(201),
     'POST /orders/:id/cancel (VOL_A order)': owner(200),

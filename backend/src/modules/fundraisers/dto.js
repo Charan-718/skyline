@@ -1,3 +1,5 @@
+import { toIsoDateString } from '../../shared/dates.js';
+
 // JSON shapes (camelCase; dates YYYY-MM-DD; instants ISO-8601 UTC; money integer paise).
 const iso = (v) => (v ? new Date(v).toISOString() : null);
 
@@ -7,13 +9,34 @@ export function toFundraiserDto(f) {
     clubId: f.club_id,
     name: f.name,
     description: f.description,
-    startsOn: f.starts_on,
-    targetDate: f.target_date,
+    startsOn: toIsoDateString(f.starts_on),
+    targetDate: toIsoDateString(f.target_date),
     goalAmountPaise: f.goal_amount_paise,
     status: f.status,
     createdAt: iso(f.created_at),
     updatedAt: iso(f.updated_at),
     completedAt: iso(f.completed_at),
+  };
+}
+
+/** Frontend/mock list shape (camelCase money fields). */
+export function toFundraiserMoneyDto(m) {
+  return {
+    incomePaise: m.income ?? 0,
+    expensesPaidPaise: m.expensesPaid ?? 0,
+    netPaise: m.net ?? (m.income ?? 0) - (m.expensesPaid ?? 0),
+    goalPct: m.goalPct ?? null,
+  };
+}
+
+export function toFundraiserListItem(f, { progress, money }) {
+  return {
+    ...toFundraiserDto(f),
+    progressPct: progress.progressPct,
+    timeElapsedPct: progress.timeElapsedPct,
+    health: progress.health,
+    counts: progress.counts,
+    money: toFundraiserMoneyDto(money),
   };
 }
 

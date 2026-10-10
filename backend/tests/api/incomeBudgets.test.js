@@ -45,7 +45,7 @@ describe('income entries (T-82)', () => {
     });
     expect(await ctx.db('audit_logs').where({ action: 'INCOME_RECORDED' })).toHaveLength(1);
     const overview = await (await ctx.signIn(club.head.id)).get(`/api/v1/fundraisers/${fundraiser.id}/overview`);
-    expect(overview.body.data.money.income).toBe(15000);
+    expect(overview.body.data.money.incomePaise).toBe(15000);
   });
 
   it('optional evidence file (multipart, validated like receipts)', async () => {

@@ -22,7 +22,7 @@ export function createMerchandiseRoutes({ controller, requireAuth, optionalAuth,
   r.post('/variants/:variantId/stock-adjustments', requireAuth, idempotency(), validate({ params: s.variantIdParams, body: s.adjustmentBody }), controller.adjustStock);
 
   r.get('/clubs/:clubId/inventory', requireAuth, validate({ params: s.clubIdParams }), requireClubRole(CH_TR), controller.inventory);
-  r.get('/clubs/:clubId/low-stock-alerts', requireAuth, validate({ params: s.clubIdParams, query: s.alertsQuery }), requireClubRole(CH), controller.alerts);
+  r.get('/clubs/:clubId/low-stock-alerts', requireAuth, validate({ params: s.clubIdParams, query: s.alertsQuery }), requireClubRole(CH_TR), controller.alerts);
 
   r.get('/clubs/:clubId/orders/quote', requireAuth, validate({ params: s.clubIdParams, query: s.quoteQuery }), controller.quote);
   r.post('/clubs/:clubId/orders', requireAuth, idempotency(), validate({ params: s.clubIdParams, body: s.placeOrderBody }), controller.placeOrder);

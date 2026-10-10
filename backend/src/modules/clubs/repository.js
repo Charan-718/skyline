@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { toCamelCase } from '../../shared/caseMap.js';
 
 export function createClubRepository({ db }) {
@@ -18,6 +19,15 @@ export function createClubRepository({ db }) {
     async findBySlug(slug, trx = db) {
       const row = await trx('clubs').where({ slug }).first();
       return row ? toCamelCase(row) : null;
+    },
+
+    async findByRef(ref, trx = db) {
+      const key = String(ref);
+      if (z.string().uuid().safeParse(key).success) {
+        const byId = await this.findById(key, trx);
+        if (byId) return byId;
+      }
+      return this.findBySlug(key.toLowerCase(), trx);
     },
 
     async createClub(row, trx) {

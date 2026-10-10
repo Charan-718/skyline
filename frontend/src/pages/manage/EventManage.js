@@ -23,7 +23,21 @@ function Overview({ event }) {
   const report = useQuery({ queryKey: ['event-report', event.id], queryFn: () => eventsApi.report(event.id) });
   if (report.isPending) return <CardsSkeleton count={4} />;
   if (report.isError) return <div className="card"><ErrorState error={report.error} onRetry={() => report.refetch()} /></div>;
-  const r = report.data;
+  const raw = report.data;
+  const r = {
+    ...raw,
+    memberVsNonMember: raw.memberVsNonMember ?? { MEMBER: 0, NON_MEMBER: 0 },
+    revenueSeries: raw.revenueSeries ?? [],
+    checkInSeries: raw.checkInSeries ?? [],
+    paymentStatusBreakdown: raw.paymentStatusBreakdown ?? [],
+    pendingBookings: raw.pendingBookings ?? 0,
+    remainingCapacity: raw.remainingCapacity ?? 0,
+    expensesPaidPaise: raw.expensesPaidPaise ?? 0,
+    expensesApprovedUnpaidPaise: raw.expensesApprovedUnpaidPaise ?? 0,
+    eventNetPaise: raw.eventNetPaise ?? 0,
+    grossRecordedRevenuePaise: raw.grossRecordedRevenuePaise ?? 0,
+    earlyBirdSold: raw.earlyBirdSold ?? 0,
+  };
   return (
     <div className="stack-lg">
       <div className="grid grid-4">

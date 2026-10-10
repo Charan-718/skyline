@@ -30,11 +30,14 @@ export function createLedgerService({ db, logger }) {
    */
   async function postPaymentIncome(trx, payment, { description, eventId, membershipId, orderId, fundraiserId } = {}) {
     if (payment.status !== 'SUCCEEDED') throw new TypeError('only SUCCEEDED payments are posted to the ledger');
+    const settledRaw = payment.settledAt ?? payment.settled_at;
+    let occurredAt = settledRaw instanceof Date ? settledRaw : new Date(settledRaw);
+    if (!(occurredAt instanceof Date) || Number.isNaN(occurredAt.getTime())) occurredAt = new Date();
     return post(trx, {
-      clubId: payment.club_id,
+      clubId: payment.clubId ?? payment.club_id,
       direction: 'IN',
       category: PAYMENT_PURPOSE_CATEGORY[payment.purpose],
-      amountPaise: payment.amount_paise,
+      amountPaise: Number(payment.amountPaise ?? payment.amount_paise),
       sourceType: 'PAYMENT',
       sourceId: payment.id,
       paymentId: payment.id,
@@ -42,11 +45,11 @@ export function createLedgerService({ db, logger }) {
       membershipId,
       orderId,
       fundraiserId,
-      payerUserId: payment.user_id,
+      payerUserId: payment.userId ?? payment.user_id,
       recordedBy: null,
       description: description ?? `${payment.purpose} ${payment.reference}`,
       reference: payment.reference,
-      occurredAt: new Date(payment.settled_at),
+      occurredAt,
     });
   }
 

@@ -23,7 +23,11 @@ npm install && npm start
 | `REACT_APP_API_MODE` | `live` | Use Express instead of in-browser mock |
 | `REACT_APP_API_BASE_URL` | `/api/v1` | Must match backend mount + CRA proxy |
 
-Root `.env`: `DATABASE_URL`, `CORS_ORIGIN=http://localhost:3000`, `SESSION_SECRET`, `COLLEGE_EMAIL_DOMAINS`.
+Root `.env`: `DATABASE_URL`, `CORS_ORIGIN=http://localhost:3000`, `SESSION_SECRET`, `COLLEGE_EMAIL_DOMAINS=skyline.ac.in`.
+
+## Demo data (`npm run seed`)
+
+`002_demo_engagement.js` mirrors `frontend/src/api/mock/seed.js` (same `@skyline.ac.in` login buttons, password **`demo1234`**). **`004_college_roster.js`** fills `college_student_roster` (fixture rows + 150 extra students + sync app users) for `COLLEGE_VERIFICATION_MODE=database`. See **`docs/COLLEGE_ROSTER_API.md`**. Idempotent skips for 002/003 when data exists; re-run full reset + seed after email changes.
 
 ## Auth (session cookies)
 

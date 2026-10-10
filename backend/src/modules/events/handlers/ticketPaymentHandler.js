@@ -40,18 +40,9 @@ export function createTicketPaymentHandler({
         }
       }
 
-      await ledgerService.post(trx, {
-        clubId: booking.clubId,
-        direction: 'IN',
-        category: 'TICKET_SALE',
-        amountPaise: Number(payment.amountPaise),
-        sourceType: 'PAYMENT',
-        sourceId: payment.id,
-        paymentId: payment.id,
+      await ledgerService.postPaymentIncome(trx, payment, {
         eventId: booking.eventId,
-        payerUserId: payment.userId,
         description: `Ticket sale ${payment.reference}`,
-        reference: payment.reference,
       });
 
       const user = await authService.getUserPublic(booking.userId);

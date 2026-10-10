@@ -20,8 +20,16 @@ export function createReportingService({ db, financeSummary, timeZone }) {
       });
     }
     const { monthly, ...metrics } = summary;
+    const incomeByCategory = Object.fromEntries(
+      categoryBreakdown.IN.map((r) => [r.category, Number(r.totalPaise) || 0]),
+    );
+    const outByCategory = Object.fromEntries(
+      categoryBreakdown.OUT.map((r) => [r.category, Number(r.totalPaise) || 0]),
+    );
     return {
       ...metrics,
+      incomeByCategory: metrics.incomeByCategory ?? incomeByCategory,
+      outByCategory,
       monthly: monthly.map((m) => ({ ...m, netPaise: m.inPaise - m.outPaise })),
       categoryBreakdown,
     };

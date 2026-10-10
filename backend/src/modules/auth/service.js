@@ -24,8 +24,45 @@ function publicUser(user) {
   };
 }
 
-export function createAuthService({ authRepository, verificationAdapter, clubsModule, auditRepository }) {
+export function createAuthService({
+  authRepository,
+  verificationAdapter,
+  clubsModule,
+  auditRepository,
+  collegeRosterRepository,
+}) {
   const audit = createAuditService(auditRepository);
+
+  async function isClubHeadSignupEmail(email) {
+    if (collegeRosterRepository && config.COLLEGE_VERIFICATION_MODE === 'database') {
+      return collegeRosterRepository.isClubHeadEligibleEmail(email);
+    }
+    return isClubHeadRegistrationEmail(email);
+  }
+
+  async function clubHeadIdentityMismatch(fullName, email) {
+    if (collegeRosterRepository && config.COLLEGE_VERIFICATION_MODE === 'database') {
+      return collegeRosterRepository.isClubHeadIdentityMismatch(fullName, email);
+    }
+    return isClubHeadIdentityMismatch(fullName, email);
+  }
+
+  async function assertStudentNotLinkedToOtherUser(studentIdentifier, userId) {
+    if (!collegeRosterRepository || !studentIdentifier) return;
+    try {
+      await collegeRosterRepository.assertLinkAllowed(studentIdentifier, userId);
+    } catch (e) {
+      if (e.code === 'STUDENT_ID_ALREADY_LINKED') {
+        throw new AppError('STUDENT_ID_ALREADY_LINKED', 409, 'This student ID is already linked to another account');
+      }
+      throw e;
+    }
+  }
+
+  async function linkRosterAccount(studentIdentifier, userId) {
+    if (!collegeRosterRepository || !studentIdentifier) return;
+    await collegeRosterRepository.linkUser(studentIdentifier, userId);
+  }
 
   function validatePassword(email, password) {
     if (!password || password.length < 8) {
@@ -90,9 +127,9 @@ export function createAuthService({ authRepository, verificationAdapter, clubsMo
         throw new AppError('EMAIL_TAKEN', 409, 'Email already registered');
       }
       const collegeDomains = config.COLLEGE_EMAIL_DOMAINS;
-      const clubHeadSignup = isClubHeadRegistrationEmail(dto.email);
+      const clubHeadSignup = await isClubHeadSignupEmail(dto.email);
 
-      if (isClubHeadIdentityMismatch(dto.fullName, dto.email)) {
+      if (await clubHeadIdentityMismatch(dto.fullName, dto.email)) {
         throw new AppError(
           'CLUB_HEAD_REGISTRATION_DENIED',
           403,
@@ -150,11 +187,15 @@ export function createAuthService({ authRepository, verificationAdapter, clubsMo
           adapterResult.studentIdentifier ??
           dto.studentIdentifier ??
           verificationHashKey(null, dto.email);
+        await assertStudentNotLinkedToOtherUser(sid, user.id);
         const row = await persistVerificationOutcome(user.id, sid, adapterResult, requestId);
         verificationOutcome = row?.outcome ?? adapterResult.outcome;
         collegeVerification = row
           ? { outcome: row.outcome, checkedAt: row.checkedAt }
           : { outcome: adapterResult.outcome };
+        if (verificationOutcome === 'VERIFIED' && sid) {
+          await linkRosterAccount(sid, user.id);
+        }
       }
 
       const accountAudience = resolveAccountAudience(dto.email, verificationOutcome, collegeDomains);
@@ -234,7 +275,15 @@ export function createAuthService({ authRepository, verificationAdapter, clubsMo
         throw new AppError('VERIFICATION_UNAVAILABLE', 503, 'Verification service unavailable');
       }
 
+      const sid = adapterResult.studentIdentifier ?? dto.studentIdentifier;
+      if (adapterResult.outcome === 'VERIFIED') {
+        await assertStudentNotLinkedToOtherUser(sid, userId);
+      }
+
       const row = await persistVerificationOutcome(userId, dto.studentIdentifier, adapterResult, requestId);
+      if (row.outcome === 'VERIFIED' && sid) {
+        await linkRosterAccount(sid, userId);
+      }
       return { outcome: row.outcome, checkedAt: row.checkedAt };
     },
 

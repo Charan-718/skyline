@@ -3,6 +3,17 @@ import { withTransaction } from '../../db/transaction.js';
 import { todayIST } from '../../shared/clock.js';
 import { parsePagination, paginatedResponse } from '../../shared/pagination.js';
 
+function buildDeliveryCountsMap(rows) {
+  const map = {};
+  for (const d of rows) {
+    const id = d.announcement_id ?? d.announcementId;
+    if (!map[id]) map[id] = { total: 0 };
+    map[id][d.status] = (map[id][d.status] || 0) + 1;
+    map[id].total += 1;
+  }
+  return map;
+}
+
 export function createAnnouncementService({
   announcementRepository,
   membershipRepository,
@@ -11,6 +22,18 @@ export function createAnnouncementService({
   notificationService,
   authz,
 }) {
+  const db = announcementRepository.db;
+
+  async function deliveryCountsFor(ids) {
+    if (!ids.length) return {};
+    const rows = await db('notification_deliveries').whereIn('announcement_id', ids).select('announcement_id', 'status');
+    return buildDeliveryCountsMap(rows);
+  }
+
+  function withDeliveryCounts(ann, countsById) {
+    return { ...ann, deliveryCounts: countsById[ann.id] || { total: 0 } };
+  }
+
   return {
     async create(actor, clubId, dto) {
       await authz.requireClubHead(actor.userId, clubId);
@@ -90,6 +113,73 @@ export function createAnnouncementService({
       const ann = await announcementRepository.findById(id);
       assertFound(ann, 'Not found');
       return ann;
+    },
+
+    async listForClub(actor, clubId, query) {
+      if (actor?.userId) {
+        await authz.requireClubHead(actor.userId, clubId);
+      }
+      let rows = await announcementRepository.listForClub(clubId);
+      if (query.status) rows = rows.filter((a) => a.status === query.status);
+      const countsById = await deliveryCountsFor(rows.map((a) => a.id));
+      return rows.map((a) => withDeliveryCounts(a, countsById));
+    },
+
+    async updateDraft(actor, id, dto) {
+      const ann = await announcementRepository.findById(id);
+      assertFound(ann, 'Not found');
+      await authz.requireClubHead(actor.userId, ann.clubId);
+      if (ann.status !== 'DRAFT') {
+        throw new AppError('ANNOUNCEMENT_IMMUTABLE', 409, 'Published announcements cannot be edited');
+      }
+      const patch = {};
+      if (dto.title != null) patch.title = dto.title;
+      if (dto.body != null) patch.body = dto.body;
+      if (dto.category != null) patch.category = dto.category;
+      if (dto.audience != null) patch.audience = dto.audience;
+      if (dto.sendEmail != null) patch.send_email = dto.sendEmail;
+      if (dto.eventId !== undefined) patch.event_id = dto.eventId;
+      const updated = await announcementRepository.updateDraft(id, patch, announcementRepository.db);
+      if (!updated) throw new AppError('ANNOUNCEMENT_IMMUTABLE', 409, 'Cannot update');
+      return updated;
+    },
+
+    async removeDraft(actor, id) {
+      const ann = await announcementRepository.findById(id);
+      assertFound(ann, 'Not found');
+      await authz.requireClubHead(actor.userId, ann.clubId);
+      if (ann.status !== 'DRAFT') {
+        throw new AppError('ANNOUNCEMENT_IMMUTABLE', 409, 'Published announcements cannot be deleted');
+      }
+      await announcementRepository.deleteDraft(id);
+    },
+
+    async listDeliveries(actor, id, query) {
+      const ann = await announcementRepository.findById(id);
+      assertFound(ann, 'Not found');
+      await authz.requireClubHead(actor.userId, ann.clubId);
+      let q = announcementRepository.db('notification_deliveries as d')
+        .leftJoin('users as u', 'u.id', 'd.recipient_user_id')
+        .where('d.announcement_id', id);
+      if (query.status) q = q.andWhere('d.status', query.status);
+      const all = await announcementRepository.db('notification_deliveries').where({ announcement_id: id });
+      const counts = all.reduce((acc, d) => ({ ...acc, [d.status]: (acc[d.status] || 0) + 1 }), {});
+      const rows = await q
+        .orderBy('d.created_at', 'desc')
+        .select('d.*', 'u.full_name as recipient_name');
+      return {
+        total: all.length,
+        counts,
+        rows: rows.map((r) => ({
+          id: r.id,
+          recipientName: r.recipient_name,
+          channel: r.channel,
+          status: r.status,
+          attempts: r.attempts,
+          lastError: r.last_error,
+          createdAt: r.created_at,
+        })),
+      };
     },
   };
 }

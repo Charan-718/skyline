@@ -1,10 +1,10 @@
-import { toFundraiserDto, toTaskDto } from './dto.js';
+import { toFundraiserDto, toFundraiserListItem, toFundraiserMoneyDto, toTaskDto } from './dto.js';
 
 export function createFundraiserController({ fundraisers }) {
   return Object.freeze({
     async list(req, res) {
       const rows = await fundraisers.list(req.valid.params.clubId, req.valid.query);
-      res.json({ data: rows.map((r) => ({ ...toFundraiserDto(r.fundraiser), progressPct: r.progressPct, health: r.health })) });
+      res.json({ data: rows.map((r) => toFundraiserListItem(r.fundraiser, { progress: r.progress, money: r.money })) });
     },
     async overview(req, res) {
       const { fundraiser, tasks, progress, money, names } = await fundraisers.overview(req.actor, req.valid.params.id);
@@ -16,7 +16,7 @@ export function createFundraiserController({ fundraisers }) {
           timeElapsedPct: progress.timeElapsedPct,
           counts: progress.counts,
           tasks: tasks.map((t) => toTaskDto(t, names, { overdue: progress.overdueIds.has(t.id) })),
-          money,
+          money: toFundraiserMoneyDto(money),
         },
       });
     },

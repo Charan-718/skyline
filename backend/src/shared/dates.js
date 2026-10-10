@@ -13,6 +13,20 @@ export function isValidIsoDate(value) {
 
 export const isoDateSchema = z.string().refine(isValidIsoDate, 'expected a valid date YYYY-MM-DD');
 
+/** Normalize a Postgres `date` (Date) or ISO date string to `YYYY-MM-DD`. */
+export function toIsoDateString(value) {
+  if (value == null || value === '') return value;
+  if (typeof value === 'string' && isValidIsoDate(value)) return value;
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) throw new RangeError(`invalid date ${value}`);
+  const y = d.getUTCFullYear();
+  const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const out = `${y}-${mo}-${day}`;
+  if (!isValidIsoDate(out)) throw new RangeError(`invalid date ${value}`);
+  return out;
+}
+
 /** ISO-8601 instant with an explicit offset (e.g. 2026-11-20T18:00:00+05:30 or ...Z). */
 export const instantSchema = z.string().datetime({ offset: true }).transform((v) => new Date(v));
 
