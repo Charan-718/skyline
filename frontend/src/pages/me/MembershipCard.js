@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowsClockwise } from '@phosphor-icons/react';
 import { membershipsApi } from '../../api/endpoints';
 import { DescriptionList, PageHeader } from '../../components/layout';
-import { ErrorState, LoadingState, StatusBadge } from '../../components/feedback';
+import { ErrorState, StatusBadge, PageLoader } from '../../components/feedback';
 import { Button } from '../../components/Button';
 import { QrCode } from '../../components/domain';
 import { ConfirmDialog } from '../../components/Modal';
@@ -26,7 +26,7 @@ export default function MembershipCard() {
     },
     onError: (e) => toast.error(e),
   });
-  if (q.isPending) return <LoadingState rows={8} />;
+  if (q.isPending) return <PageLoader />;
   if (q.isError) return <div className="card"><ErrorState error={q.error} onRetry={() => q.refetch()} /></div>;
   const d = q.data;
   return (

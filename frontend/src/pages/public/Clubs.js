@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Buildings } from '@phosphor-icons/react';
 import { clubsApi } from '../../api/endpoints';
 import { PageHeader } from '../../components/layout';
-import { EmptyState, LoadingState, QueryState } from '../../components/feedback';
+import { EmptyState, QueryState, PageLoader } from '../../components/feedback';
 import { Button } from '../../components/Button';
 import { plural } from '../../utils/dates';
 
@@ -11,7 +11,7 @@ export default function Clubs() {
   return (
     <>
       <PageHeader title="Clubs" description="Every student organization on campus." />
-      <QueryState query={clubs} loading={<LoadingState rows={6} />} empty={<EmptyState icon={Buildings} title="No clubs yet" />}>
+      <QueryState query={clubs} loading={<PageLoader />} empty={<EmptyState icon={Buildings} title="No clubs yet" />}>
         {(list) => (
           <ol className="ruled">
             {list.map((c, i) => (

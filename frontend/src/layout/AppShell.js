@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate } from 'react-router-dom';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, NavLink, Outlet, matchPath, useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Buildings, CalendarBlank, CaretDown, ChartLineUp, Check, ClipboardText, Code, CreditCard, Gauge, HandCoins, House, IdentificationBadge, List, Megaphone, Moon,
-  Package, QrCode, Receipt, ShoppingBag, SignOut, Sun, Ticket, UserCircle, Users, UsersThree, Wallet,
+  Package, QrCode, Receipt, ShoppingBag, SignOut, Sun, Ticket, UserCircle, Users, UsersThree, Wallet, X,
 } from '@phosphor-icons/react';
 import { useAuth } from '../auth/AuthProvider';
 import { clubsApi } from '../api/endpoints';
@@ -12,6 +12,7 @@ import { useTheme } from '../components/Theme';
 import { Avatar } from '../components/domain';
 import Brand from '../components/Brand';
 import { Button, IconButton } from '../components/Button';
+import { PageLoader } from '../components/feedback';
 import { LABELS } from '../utils/status';
 
 const LAST_CLUB_KEY = 'soms.lastClub';
@@ -54,7 +55,7 @@ function NavItem({ to, icon: Icon, children, end, onNavigate }) {
   );
 }
 
-function buildNav({ user, clubId, rolesIn, organizerOf, staffOf }) {
+function buildNav({ user, clubId, clubName, rolesIn, organizerOf, staffOf }) {
   const sections = [
     {
       heading: 'Discover',
@@ -86,7 +87,8 @@ function buildNav({ user, clubId, rolesIn, organizerOf, staffOf }) {
     const head = roles.includes('CLUB_HEAD');
     const tr = roles.includes('TREASURER');
     sections.push({
-      heading: 'Manage club',
+      heading: 'Manage',
+      subheading: clubName,
       items: [
         { to: `/manage/${clubId}`, icon: Gauge, label: 'Dashboard', end: true },
         (head || tr) && { to: `/manage/${clubId}/members`, icon: Users, label: 'Members' },
@@ -106,11 +108,8 @@ function buildNav({ user, clubId, rolesIn, organizerOf, staffOf }) {
   return sections;
 }
 
-function ClubSwitcher({ clubs, managedIds, activeId }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  const navigate = useNavigate();
-  const { rolesIn } = useAuth();
+// Close a popover on outside click or Escape.
+function useDismiss(ref, open, setOpen) {
   useEffect(() => {
     if (!open) return undefined;
     const close = (e) => {
@@ -123,44 +122,61 @@ function ClubSwitcher({ clubs, managedIds, activeId }) {
       document.removeEventListener('mousedown', close);
       document.removeEventListener('keydown', esc);
     };
-  }, [open]);
-  const active = clubs.find((c) => c.id === activeId);
-  if (!managedIds.length) return null;
-  return (
-    <div ref={ref} style={{ position: 'relative', minWidth: 0 }}>
-      <button type="button" className="btn btn-ghost" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} style={{ maxWidth: '100%', color: 'var(--color-text-primary)' }}>
-        <Buildings size={18} aria-hidden />
-        <span className="wrap-anywhere" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {active?.name || 'Select club'}
+  }, [ref, open, setOpen]);
+}
+
+/** The clubs the user manages; picking one opens its dashboard. */
+function ClubOptions({ clubs, managedIds, activeId, onPick }) {
+  const navigate = useNavigate();
+  const { rolesIn } = useAuth();
+  return clubs
+    .filter((c) => managedIds.includes(c.id))
+    .map((c) => (
+      <button
+        key={c.id}
+        type="button"
+        aria-pressed={c.id === activeId}
+        className="menu-item"
+        onClick={() => {
+          onPick?.();
+          navigate(`/manage/${c.id}`);
+        }}
+      >
+        <span style={{ flex: 1 }}>
+          {c.name}
+          <span className="cell-sub" style={{ display: 'block' }}>
+            {rolesIn(c.id).map((r) => LABELS.role[r]).join(' · ')}
+          </span>
         </span>
-        <CaretDown size={14} aria-hidden />
+        {c.id === activeId && <Check size={16} aria-hidden />}
+      </button>
+    ));
+}
+
+/** A top-bar dropdown for one nav section. Marked current when any of its pages is open. */
+function NavMenu({ section, children }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const { pathname } = useLocation();
+  useDismiss(ref, open, setOpen);
+  useEffect(() => setOpen(false), [pathname]);
+  const current = section.items.some((i) => matchPath({ path: i.to, end: !!i.end }, pathname));
+  return (
+    <div ref={ref} className="topnav-menu">
+      <button type="button" className="topnav-link" data-current={current || undefined} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        {section.heading}
+        <CaretDown size={12} aria-hidden />
       </button>
       {open && (
-        <div className="menu" role="menu" style={{ left: 0, right: 'auto' }}>
-          <div className="nav-heading">Clubs you manage</div>
-          {clubs
-            .filter((c) => managedIds.includes(c.id))
-            .map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                role="menuitemradio"
-                aria-checked={c.id === activeId}
-                className="menu-item"
-                onClick={() => {
-                  setOpen(false);
-                  navigate(`/manage/${c.id}`);
-                }}
-              >
-                <span style={{ flex: 1 }}>
-                  {c.name}
-                  <span className="cell-sub" style={{ display: 'block' }}>
-                    {rolesIn(c.id).map((r) => LABELS.role[r]).join(' · ')}
-                  </span>
-                </span>
-                {c.id === activeId && <Check size={16} aria-hidden />}
-              </button>
-            ))}
+        <div className="menu" style={{ left: 0, right: 'auto' }}>
+          {children}
+          {section.subheading && <div className="nav-heading">{section.subheading}</div>}
+          {section.items.map((i) => (
+            <NavLink key={i.to} to={i.to} end={i.end} className="menu-item">
+              <i.icon size={18} aria-hidden />
+              {i.label}
+            </NavLink>
+          ))}
         </div>
       )}
     </div>
@@ -172,19 +188,7 @@ function UserMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const navigate = useNavigate();
-  useEffect(() => {
-    if (!open) return undefined;
-    const close = (e) => {
-      if (!ref.current?.contains(e.target)) setOpen(false);
-    };
-    const esc = (e) => e.key === 'Escape' && setOpen(false);
-    document.addEventListener('mousedown', close);
-    document.addEventListener('keydown', esc);
-    return () => {
-      document.removeEventListener('mousedown', close);
-      document.removeEventListener('keydown', esc);
-    };
-  }, [open]);
+  useDismiss(ref, open, setOpen);
   if (!user) {
     return (
       <div className="row">
@@ -245,6 +249,8 @@ export default function AppShell() {
   const { theme, setPreference } = useTheme();
   const location = useLocation();
   const mainRef = useRef(null);
+  const headerRef = useRef(null);
+  useDismiss(headerRef, navOpen, setNavOpen);
 
   // Move focus to the page title on navigation (WCAG focus-on-route-change).
   const firstRender = useRef(true);
@@ -262,61 +268,87 @@ export default function AppShell() {
     return () => clearTimeout(t);
   }, [location.pathname]);
 
-  const sections = useMemo(() => buildNav({ ...auth, clubId: activeClub }), [auth, activeClub]);
+  const clubName = (clubs.data || []).find((c) => c.id === activeClub)?.name;
+  const sections = useMemo(() => buildNav({ ...auth, clubId: activeClub, clubName }), [auth, activeClub, clubName]);
+  const [discover, ...rest] = sections;
+  const manyClubs = managedClubIds.length > 1;
+  const clubOptions = (onPick) => <ClubOptions clubs={clubs.data || []} managedIds={managedClubIds} activeId={activeClub} onPick={onPick} />;
 
   return (
-    <div className="shell" data-nav-open={navOpen}>
+    <div className="shell">
       <a href="#main" className="skip-link">
         Skip to main content
       </a>
-      {navOpen && <div className="sidebar-scrim" onClick={() => setNavOpen(false)} aria-hidden />}
-      <aside className="sidebar" data-open={navOpen} aria-label="Primary">
+      {IS_DEMO && (
+        <div className="demo-banner" role="note">
+          <Code size={16} aria-hidden />
+          Demo mode · data is simulated in your browser until the backend is connected
+        </div>
+      )}
+      <header className="topbar" ref={headerRef}>
         <Brand />
-        <nav className="nav">
-          {sections.map((s) => (
-            <div key={s.heading} className="nav-section">
-              <div className="nav-heading">{s.heading}</div>
-              {s.items.map((i) => (
-                <NavItem key={i.to} to={i.to} icon={i.icon} end={i.end} onNavigate={() => setNavOpen(false)}>
-                  {i.label}
-                </NavItem>
-              ))}
-            </div>
+        <nav className="topnav" aria-label="Primary">
+          {discover.items.map((i) => (
+            <NavLink key={i.to} to={i.to} end={i.end} className="topnav-link">
+              {i.label}
+            </NavLink>
           ))}
+          {rest.map((sec) =>
+            sec.items.length === 1 ? (
+              <NavLink key={sec.heading} to={sec.items[0].to} className="topnav-link">
+                {sec.items[0].label}
+              </NavLink>
+            ) : (
+              <NavMenu key={sec.heading} section={sec}>
+                {sec.subheading && manyClubs && (
+                  <>
+                    <div className="nav-heading">Clubs you manage</div>
+                    {clubOptions()}
+                    <hr className="divider" style={{ margin: '4px 0' }} />
+                  </>
+                )}
+              </NavMenu>
+            ),
+          )}
         </nav>
-        {!user && (
-          <div className="sidebar-footer stack-sm">
-            <Button variant="primary" to="/register" block>
-              Create account
-            </Button>
-          </div>
-        )}
-      </aside>
-      <div className="main">
-        {IS_DEMO && (
-          <div className="demo-banner" role="note">
-            <Code size={16} aria-hidden />
-            Demo mode · data is simulated in your browser until the backend is connected
-          </div>
-        )}
-        <header className="topbar">
-          <IconButton icon={List} label="Toggle navigation" className="menu-btn" onClick={() => setNavOpen(p => !p)} aria-expanded={navOpen} />
-          {user && <ClubSwitcher clubs={clubs.data || []} managedIds={managedClubIds} activeId={activeClub} />}
-          <div className="topbar-spacer" />
-          <IconButton icon={theme === 'dark' ? Sun : Moon} label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} onClick={() => setPreference(theme === 'dark' ? 'light' : 'dark')} />
-          <UserMenu />
-        </header>
-        <main id="main" ref={mainRef} tabIndex={-1} className="content" style={{ outline: 'none' }}>
-          <Outlet />
-        </main>
-        <footer className="footer">
-          <span>Campus Flow · Student organizations</span>
-          <nav aria-label="Legal">
-            <Link to="/terms">Terms of use</Link>
-            <Link to="/privacy">Privacy policy</Link>
+        <div className="topbar-spacer" />
+        <IconButton icon={theme === 'dark' ? Sun : Moon} label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} onClick={() => setPreference(theme === 'dark' ? 'light' : 'dark')} />
+        <UserMenu />
+        <IconButton icon={navOpen ? X : List} label={navOpen ? 'Close navigation' : 'Open navigation'} className="menu-btn" onClick={() => setNavOpen((p) => !p)} aria-expanded={navOpen} aria-controls="mobile-nav" />
+        {navOpen && (
+          <nav id="mobile-nav" className="mobile-nav" aria-label="Primary">
+            {sections.map((s) => (
+              <div key={s.heading} className="nav-section">
+                <div className="nav-heading">{s.subheading ? `${s.heading} · ${s.subheading}` : s.heading}</div>
+                {s.subheading && manyClubs && <div className="mobile-nav-clubs">{clubOptions(() => setNavOpen(false))}</div>}
+                {s.items.map((i) => (
+                  <NavItem key={i.to} to={i.to} icon={i.icon} end={i.end} onNavigate={() => setNavOpen(false)}>
+                    {i.label}
+                  </NavItem>
+                ))}
+              </div>
+            ))}
+            {!user && (
+              <Button variant="primary" to="/register" block>
+                Create account
+              </Button>
+            )}
           </nav>
-        </footer>
-      </div>
+        )}
+      </header>
+      <main id="main" ref={mainRef} tabIndex={-1} className="content" style={{ outline: 'none' }}>
+        {/* Keyed so each page gets a fresh boundary: the logo shows while its code loads, even mid-transition. */}
+        <Suspense key={location.pathname} fallback={<PageLoader />}>
+          <Outlet />
+        </Suspense>
+      </main>
+      <footer className="footer">
+        <span>Campus Flow · Student organizations</span>
+        <nav aria-label="Legal">
+          <Link to="/terms">Terms of use</Link>
+          <Link to="/privacy">Privacy policy</Link>
+        </nav>
+      </footer>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { merchApi } from '../../api/endpoints';
 import { Card, DescriptionList, PageHeader } from '../../components/layout';
-import { Alert, ErrorState, LoadingState, StatusBadge } from '../../components/feedback';
+import { Alert, ErrorState, StatusBadge, PageLoader } from '../../components/feedback';
 import { Button } from '../../components/Button';
 import { DataTable } from '../../components/DataTable';
 import { Money } from '../../components/domain';
@@ -24,7 +24,7 @@ export default function OrderDetail() {
     },
     onError: (e) => toast.error(e),
   });
-  if (q.isPending) return <LoadingState rows={8} />;
+  if (q.isPending) return <PageLoader />;
   if (q.isError) return <div className="card"><ErrorState error={q.error} onRetry={() => q.refetch()} /></div>;
   const o = q.data;
   const pending = o.payments.find((p) => ['INITIATED', 'PENDING'].includes(p.status));

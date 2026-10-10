@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import AppShell from './layout/AppShell';
 import { RequireAuth, RequireClubRole } from './auth/guards';
-import { LoadingState } from './components/feedback';
+import { PageLoader } from './components/feedback';
 import { IS_DEMO } from './api/config';
 import Splash, { useSplash } from './components/Splash';
 
@@ -64,7 +64,7 @@ export default function App() {
   if (splash) return <Splash />;
 
   return (
-    <Suspense fallback={<LoadingState rows={6} />}>
+    <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />

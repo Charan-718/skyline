@@ -25,6 +25,7 @@
   --font-family-serif: 'Instrument Serif', Georgia, serif;
   --font-family-sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-family-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  --font-family-poster: 'Bodoni Moda', 'Instrument Serif', Georgia, serif;
 
   /*
    * Type scale. Anchored at 16px with steps of √φ (≈1.272), so every second step is a
@@ -92,7 +93,6 @@
   /* ── Layout ──────────────────────────────────── */
   --container-max: 1280px;
   --container-reading: 68ch;
-  --sidebar-width: 252px;
   --header-height: 56px;
 
   --z-sticky: 20;
@@ -214,11 +214,16 @@
   --color-camera-bg: #161412;
   --color-camera-text: #c4bcaf;
 
-  /* Launch screen: a night backdrop behind the campus photo in either theme. */
-  --color-splash-bg: #12100e;
-  --color-splash-text: #efe9df;
-  --color-splash-muted: #9a9286;
-  --color-splash-track: rgba(239, 233, 223, 0.16);
+  /* Launch screen: the NMIT poster palette, the same in both themes. */
+  --color-poster-bg: #f4eddf;
+  --color-poster-ink: #1c1a17;
+  --color-poster-rule: rgba(28, 26, 23, 0.26);
+  --color-poster-blue: #a9cadb;
+  --color-poster-blue-soft: #cddde4;
+  --color-poster-peach: #f5ad8a;
+  --color-poster-peach-soft: #f9cda8;
+  --color-poster-sun-top: #fcd5b2;
+  --color-poster-sun-bottom: #f0a585;
 }
 
 /* Aliases so `tone="danger"` maps to the semantic error colour. */

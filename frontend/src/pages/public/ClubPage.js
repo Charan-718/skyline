@@ -6,7 +6,7 @@ import { announcementsApi, eventsApi } from '../../api/endpoints';
 import { useAuth } from '../../auth/AuthProvider';
 import { useClub } from '../../hooks';
 import { Card, PageHeader, Tabs } from '../../components/layout';
-import { Alert, EmptyState, ErrorState, LoadingState, QueryState, StatusBadge } from '../../components/feedback';
+import { Alert, EmptyState, ErrorState, QueryState, StatusBadge, PageLoader } from '../../components/feedback';
 import { Button } from '../../components/Button';
 import { AnnouncementItem, EventCard } from '../../components/cards';
 import { formatDate } from '../../utils/dates';
@@ -39,7 +39,7 @@ export default function ClubPage() {
   const events = useQuery({ queryKey: ['events', 'club', id], queryFn: () => eventsApi.clubEvents(id), enabled: !!id });
   const news = useQuery({ queryKey: ['announcements', 'club', id], queryFn: () => announcementsApi.clubList(id), enabled: !!id });
 
-  if (club.isPending) return <LoadingState rows={8} />;
+  if (club.isPending) return <PageLoader />;
   if (club.isError) return <div className="card"><ErrorState error={club.error} onRetry={() => club.refetch()} /></div>;
   const c = club.data;
   return (

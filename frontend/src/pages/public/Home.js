@@ -40,7 +40,7 @@ export default function Home() {
 
       <div className="grid grid-main-side">
         <Card title="Upcoming events" actions={<Button variant="ghost" size="sm" to="/events" iconRight={ArrowRight}>All events</Button>}>
-          <QueryState query={events} loading={<LoadingState rows={5} />} isEmpty={(d) => !d.data.length} empty={<EmptyState icon={CalendarBlank} title="No upcoming events">Check back soon. Clubs publish their events here.</EmptyState>}>
+          <QueryState query={events} loading={<LoadingState />} isEmpty={(d) => !d.data.length} empty={<EmptyState icon={CalendarBlank} title="No upcoming events">Check back soon. Clubs publish their events here.</EmptyState>}>
             {(d) => (
               <div className="grid grid-2">
                 {d.data.map((e) => (

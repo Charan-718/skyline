@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowsClockwise, QrCode } from '@phosphor-icons/react';
 import { membershipsApi } from '../../api/endpoints';
 import { Card, DescriptionList, PageHeader } from '../../components/layout';
-import { Alert, Badge, ErrorState, LoadingState, StatusBadge } from '../../components/feedback';
+import { Alert, Badge, ErrorState, StatusBadge, PageLoader } from '../../components/feedback';
 import { Button } from '../../components/Button';
 import { Money } from '../../components/domain';
 import { DataTable } from '../../components/DataTable';
@@ -98,7 +98,7 @@ export default function MembershipDetail() {
   const { membershipId } = useParams();
   const [renewOpen, setRenewOpen] = useState(false);
   const q = useQuery({ queryKey: ['membership', membershipId], queryFn: () => membershipsApi.detail(membershipId) });
-  if (q.isPending) return <LoadingState rows={8} />;
+  if (q.isPending) return <PageLoader />;
   if (q.isError) return <div className="card"><ErrorState error={q.error} onRetry={() => q.refetch()} /></div>;
   const m = q.data;
   const b = m.benefits;

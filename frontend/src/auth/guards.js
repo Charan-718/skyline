@@ -1,13 +1,13 @@
 import { Navigate, useLocation, useParams } from 'react-router-dom';
 import { LockKey } from '@phosphor-icons/react';
 import { useAuth } from './AuthProvider';
-import { EmptyState, LoadingState } from '../components/feedback';
+import { EmptyState, PageLoader } from '../components/feedback';
 import { Button } from '../components/Button';
 
 export function RequireAuth({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
-  if (loading) return <LoadingState rows={6} />;
+  if (loading) return <PageLoader />;
   if (!user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
   return children;
 }
@@ -16,7 +16,7 @@ export function RequireAuth({ children }) {
 export function RequireClubRole({ roles, children }) {
   const { clubId } = useParams();
   const { rolesIn, loading } = useAuth();
-  if (loading) return <LoadingState rows={6} />;
+  if (loading) return <PageLoader />;
   const mine = rolesIn(clubId);
   const allowed = roles === 'TEAM' ? mine.length > 0 : mine.some((r) => roles.includes(r));
   if (!allowed) {

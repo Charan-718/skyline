@@ -6,7 +6,7 @@ import { paymentsApi } from '../../api/endpoints';
 import { useAuth } from '../../auth/AuthProvider';
 import { useIdempotencyKey } from '../../hooks';
 import { Card, DescriptionList, PageHeader } from '../../components/layout';
-import { Alert, ErrorState, LoadingState, StatusBadge } from '../../components/feedback';
+import { Alert, ErrorState, StatusBadge, PageLoader } from '../../components/feedback';
 import { Button } from '../../components/Button';
 import { Money, SimulatedBanner } from '../../components/domain';
 import { useToast } from '../../components/Toast';
@@ -82,7 +82,7 @@ export default function Checkout() {
     },
   });
 
-  if (payment.isPending) return <LoadingState rows={8} />;
+  if (payment.isPending) return <PageLoader />;
   if (payment.isError) return <div className="card"><ErrorState error={payment.error} onRetry={() => payment.refetch()} /></div>;
   const p = payment.data;
   const settled = ['SUCCEEDED', 'FAILED', 'EXPIRED'].includes(p.status);
