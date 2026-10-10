@@ -36,10 +36,9 @@ export function Skeleton({ height = 16, width = '100%', style }) {
 }
 
 /**
- * The Campus Flow star as a loader: one clockwise turn while it grows slightly, then an
- * anticlockwise turn back to its resting size. Repeats until the content arrives.
+ * The Campus Flow star as an animated loader revealing its 5 corner lines from center.
  */
-export function LogoLoader({ size = 40, label = 'Loading…', page = false }) {
+export function LogoLoader({ size = 64, label = 'Loading…', page = false }) {
   return (
     <div className={`logo-loader${page ? ' logo-loader-page' : ''}`} role="status" aria-live="polite">
       <Logo size={size} className="logo-loader-mark" />
@@ -49,11 +48,11 @@ export function LogoLoader({ size = 40, label = 'Loading…', page = false }) {
 }
 
 /** Whole-page loading: route code, auth checks and pages waiting on their main record. */
-export const PageLoader = ({ label }) => <LogoLoader size={56} label={label} page />;
+export const PageLoader = ({ size = 112, label }) => <LogoLoader size={size} label={label} page />;
 
 /** Loading inside a section of a page. */
-export function LoadingState({ label }) {
-  return <LogoLoader label={label} />;
+export function LoadingState({ size = 64, label }) {
+  return <LogoLoader size={size} label={label} />;
 }
 
 export function CardsSkeleton({ count = 4 }) {
