@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Eye, EyeSlash } from '@phosphor-icons/react';
 import AuthLayout from './AuthLayout';
 import { authApi } from '../../api/endpoints';
-import { IS_DEMO } from '../../api/config';
+import { SHOW_DEMO_LOGINS } from '../../api/config';
 import { useAuth } from '../../auth/AuthProvider';
 import { Field, Input, required, useForm } from '../../components/forms';
 import { Button } from '../../components/Button';
@@ -16,7 +16,8 @@ const DEMO_ACCOUNTS = [
   { email: 'asha@srkrec.ac.in', name: 'Asha Rao', role: 'Club head · Skyline; volunteer · Robotics' },
   { email: 'ravi@srkrec.ac.in', name: 'Ravi Kumar', role: 'Treasurer · Skyline' },
   { email: 'meera@srkrec.ac.in', name: 'Meera Iyer', role: 'Volunteer & event staff · Skyline' },
-  { email: 'karthik@srkrec.ac.in', name: 'Karthik Reddy', role: 'Event organizer · member' },
+  { email: 'karthik@srkrec.ac.in', name: 'Karthik Reddy', role: 'Club head · Photography; treasurer · Robotics; event organizer' },
+  { email: 'vikram@srkrec.ac.in', name: 'Vikram Shetty', role: 'Club head · Robotics' },
   { email: 'priya.nair@gmail.com', name: 'Priya Nair', role: 'Non-member, not yet verified' },
 ];
 
@@ -63,7 +64,7 @@ export default function Login() {
           Sign in
         </Button>
       </form>
-      {IS_DEMO && (
+      {SHOW_DEMO_LOGINS && (
         <div className="stack-sm">
           <hr className="divider" style={{ margin: '4px 0' }} />
           <div className="label">Demo accounts</div>
