@@ -142,10 +142,10 @@ export default function Checkout() {
                 </Alert>
               )}
               <div className="grid grid-3">
-                <Button variant="success" icon={CheckCircle} size="lg" loading={simulate.isPending && simulate.variables === 'SUCCEEDED'} disabled={simulate.isPending} onClick={() => simulate.mutate('SUCCEEDED')}>
+                <Button variant="success" className="pay-btn" icon={CheckCircle} size="lg" loading={simulate.isPending && simulate.variables === 'SUCCEEDED'} disabled={simulate.isPending} onClick={() => simulate.mutate('SUCCEEDED')}>
                   Succeed
                 </Button>
-                <Button variant="danger" icon={XCircle} size="lg" loading={simulate.isPending && simulate.variables === 'FAILED'} disabled={simulate.isPending} onClick={() => simulate.mutate('FAILED')}>
+                <Button variant="danger" className="pay-btn" icon={XCircle} size="lg" loading={simulate.isPending && simulate.variables === 'FAILED'} disabled={simulate.isPending} onClick={() => simulate.mutate('FAILED')}>
                   Fail
                 </Button>
                 {p.status !== 'PENDING' && (

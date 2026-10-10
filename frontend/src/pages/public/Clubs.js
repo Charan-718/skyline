@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Buildings, MagnifyingGlass } from '@phosphor-icons/react';
 import { useSearchParams } from 'react-router-dom';
@@ -7,16 +8,19 @@ import { EmptyState, QueryState, PageLoader } from '../../components/feedback';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/forms';
 import { plural } from '../../utils/dates';
+import { useDebounced } from '../../hooks';
 
 export default function Clubs() {
   const clubs = useQuery({ queryKey: ['clubs'], queryFn: () => clubsApi.list() });
   const [params, setParams] = useSearchParams();
-  const search = params.get('q') || ''; 
+  const [q, setQ] = useState(params.get('q') || '');
+  const search = useDebounced(q.trim().toLowerCase());
 
-  const onChangeName = (e) => {
-    setParams({ q: e.target.value.toLowerCase() }, { replace: true });
-  }
-    
+  // Write the settled search to the URL so it survives reloads and sharing.
+  useEffect(() => {
+    setParams(search ? { q: search } : {}, { replace: true });
+  }, [search, setParams]);
+
   return (
     <>
       <PageHeader 
@@ -30,8 +34,8 @@ export default function Clubs() {
             <Input 
               type="search" 
               placeholder="Search for clubs..." 
-              value={search} 
-              onChange={onChangeName} 
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
               aria-label="Search clubs"
             />
           </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { CalendarBlank, MagnifyingGlass } from '@phosphor-icons/react';
@@ -9,6 +9,7 @@ import { Input, Select } from '../../components/forms';
 import { Checkbox } from '../../components/forms';
 import { Pagination } from '../../components/DataTable';
 import { EventCard } from '../../components/cards';
+import { useDebounced } from '../../hooks';
 
 export default function Events() {
   const [params, setParams] = useSearchParams();
@@ -28,6 +29,12 @@ export default function Events() {
     if (!('page' in patch)) next.delete('page');
     setParams(next, { replace: true });
   };
+  const dq = useDebounced(q.trim());
+  useEffect(() => {
+    if (dq !== (params.get('q') || '')) update({ q: dq });
+    // Only react to the settled search text; `update` reads the latest params itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dq]);
 
   return (
     <>
@@ -44,7 +51,7 @@ export default function Events() {
         >
           <div className="input-group grow">
             <MagnifyingGlass size={16} className="prefix" aria-hidden />
-            <Input type="search" placeholder="Search events or venues" aria-label="Search events" value={q} onChange={(e) => setQ(e.target.value)} onBlur={() => update({ q })} />
+            <Input type="search" placeholder="Search events or venues" aria-label="Search events" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
           <Select aria-label="Filter by club" value={clubId} onChange={(e) => update({ clubId: e.target.value })} placeholder="All clubs" options={(clubs.data || []).map((c) => ({ value: c.id, label: c.name }))} style={{ width: 'auto', minWidth: 180 }} />
           <Checkbox label="Include past events" checked={includePast} onChange={(e) => update({ past: e.target.checked ? '1' : '' })} />

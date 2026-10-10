@@ -1,3 +1,4 @@
+import { useDebounced } from '../../hooks';
 import { useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -17,7 +18,6 @@ import { formatDate, formatDateTime, formatTime } from '../../utils/dates';
 import { formatMoney, formatPercent } from '../../utils/money';
 import { label, LABELS } from '../../utils/status';
 import { EventForm } from './EventForm';
-import { useDebounced } from './useDebounced';
 
 function Overview({ event }) {
   const report = useQuery({ queryKey: ['event-report', event.id], queryFn: () => eventsApi.report(event.id) });

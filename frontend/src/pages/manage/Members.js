@@ -1,3 +1,4 @@
+import { useDebounced } from '../../hooks';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
@@ -9,7 +10,6 @@ import { DataTable, Pagination, Toolbar } from '../../components/DataTable';
 import { Input, Select } from '../../components/forms';
 import { Money } from '../../components/domain';
 import { formatDate } from '../../utils/dates';
-import { useDebounced } from './useDebounced';
 
 export default function Members() {
   const { clubId } = useParams();

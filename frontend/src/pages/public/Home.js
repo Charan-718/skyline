@@ -30,7 +30,7 @@ export default function Home() {
         <p className="tagline">Join clubs, book events with a QR ticket, order merch from your phone and keep every rupee accounted for.</p>
         <p className="tags">[ memberships · events · merchandise · finance ]</p>
         <div className="actions" style={{ marginTop: 'var(--space-6)' }}>
-          <Button variant="primary" to="/events">
+          <Button variant="primary" to="/events" data-tour="browse-events">
             Browse events
           </Button>
           {managedClubIds[0] && <Button to={`/manage/${managedClubIds[0]}`}>Open club dashboard</Button>}

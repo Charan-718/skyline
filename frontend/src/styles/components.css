@@ -273,8 +273,24 @@
   gap: var(--space-5);
 }
 
-.footer a {
+.footer a,
+.footer-link {
   color: var(--color-text-secondary);
+}
+
+.footer-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+.footer-link:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
 }
 
 @media (min-width: 768px) {
@@ -603,6 +619,45 @@ a.stat-card:hover .stat-value {
 .btn-success:hover:not(:disabled) {
   background: var(--btn-bg);
   filter: brightness(0.9);
+}
+
+/* Payment decision buttons: vivid green / red with a soft glow, lifting on hover. */
+.btn.pay-btn {
+  --btn-fg: #fff;
+  color: #fff;
+  border: 0;
+  letter-spacing: 0.02em;
+  transition: transform var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard), filter var(--duration-fast) var(--ease-standard);
+}
+
+.btn-success.pay-btn {
+  background: linear-gradient(135deg, var(--color-success-vivid), var(--color-success-vivid-deep));
+  box-shadow: 0 6px 18px -6px rgba(18, 183, 106, 0.65);
+}
+
+.btn-danger.pay-btn {
+  background: linear-gradient(135deg, var(--color-error-vivid), var(--color-error-vivid-deep));
+  box-shadow: 0 6px 18px -6px rgba(240, 68, 56, 0.65);
+}
+
+.btn.pay-btn:hover:not(:disabled) {
+  filter: brightness(1.06) saturate(1.1);
+  transform: translateY(-1px);
+}
+
+.btn-success.pay-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--color-success-vivid), var(--color-success-vivid-deep));
+  box-shadow: 0 10px 24px -8px rgba(18, 183, 106, 0.8);
+}
+
+.btn-danger.pay-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--color-error-vivid), var(--color-error-vivid-deep));
+  box-shadow: 0 10px 24px -8px rgba(240, 68, 56, 0.8);
+}
+
+.btn.pay-btn:active:not(:disabled) {
+  transform: translateY(0);
+  filter: brightness(0.96);
 }
 
 .btn-ghost {
@@ -2399,4 +2454,149 @@ button.task-card:hover {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+/* ── Guided tour ───────────────────────────────── */
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.tour-backdrop {
+  position: absolute;
+  inset: 0;
+}
+
+/* The spotlight: a transparent box whose giant shadow dims everything else. */
+.tour-spot {
+  position: fixed;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 9999px rgba(22, 20, 18, 0.62);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  pointer-events: none;
+  transition: top 380ms var(--ease-standard), left 380ms var(--ease-standard), width 380ms var(--ease-standard), height 380ms var(--ease-standard);
+  animation: tour-pulse 1.8s ease-in-out infinite;
+}
+
+.tour-spot-none {
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  outline: 0;
+  animation: none;
+}
+
+@keyframes tour-pulse {
+  0%,
+  100% {
+    outline-color: var(--color-accent);
+    outline-offset: 2px;
+  }
+  50% {
+    outline-color: var(--color-accent-soft);
+    outline-offset: 6px;
+  }
+}
+
+.tour-card {
+  position: fixed;
+  width: min(340px, calc(100vw - 32px));
+  padding: var(--space-5);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-lg);
+  transition: top 380ms var(--ease-standard), left 380ms var(--ease-standard);
+  animation: tour-card-in 260ms var(--ease-standard) both;
+}
+
+@keyframes tour-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.tour-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.tour-count {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.12em;
+  color: var(--color-accent);
+}
+
+.tour-close {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.tour-close:hover {
+  background: var(--color-surface-interactive);
+}
+
+.tour-title {
+  font-size: var(--font-size-xl);
+  letter-spacing: 0.04em;
+}
+
+.tour-body {
+  margin-top: var(--space-2);
+  color: var(--color-text-secondary);
+}
+
+.tour-dots {
+  display: flex;
+  gap: 6px;
+  margin-top: var(--space-4);
+}
+
+.tour-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-border-strong);
+  opacity: 0.35;
+  transition: width 240ms var(--ease-standard), opacity 240ms var(--ease-standard), background-color 240ms var(--ease-standard);
+}
+
+.tour-dots .is-done {
+  opacity: 0.7;
+}
+
+.tour-dots .is-active {
+  width: 20px;
+  background: var(--color-accent);
+  opacity: 1;
+}
+
+.tour-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-spot,
+  .tour-card {
+    transition: none;
+    animation: none;
+  }
 }

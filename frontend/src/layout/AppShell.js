@@ -13,6 +13,7 @@ import { Avatar } from '../components/domain';
 import Brand from '../components/Brand';
 import { Button, IconButton } from '../components/Button';
 import { PageLoader } from '../components/feedback';
+import Tour, { hasSeenTour, tourSteps } from '../components/Tour';
 import { LABELS } from '../utils/status';
 
 const LAST_CLUB_KEY = 'soms.lastClub';
@@ -191,7 +192,7 @@ function UserMenu() {
   useDismiss(ref, open, setOpen);
   if (!user) {
     return (
-      <div className="row">
+      <div className="row" data-tour="account">
         <Button variant="ghost" to="/login">
           Sign in
         </Button>
@@ -202,7 +203,7 @@ function UserMenu() {
     );
   }
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
+    <div ref={ref} style={{ position: 'relative' }} data-tour="account">
       <button type="button" className="btn btn-ghost" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} aria-label={`Account menu for ${user.fullName}`} style={{ paddingInline: 6 }}>
         <Avatar name={user.fullName} />
         <span className="hide-mobile" style={{ color: 'var(--color-text-primary)' }}>
@@ -252,6 +253,19 @@ export default function AppShell() {
   const headerRef = useRef(null);
   useDismiss(headerRef, navOpen, setNavOpen);
 
+  // First visit: walk the user through the main areas once the home page has rendered.
+  const [touring, setTouring] = useState(false);
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (location.pathname !== '/home' || hasSeenTour()) return undefined;
+    const t = setTimeout(() => setTouring(true), 900);
+    return () => clearTimeout(t);
+  }, [location.pathname]);
+  const startTour = () => {
+    if (location.pathname !== '/home') navigate('/home');
+    setTimeout(() => setTouring(true), location.pathname === '/home' ? 0 : 900);
+  };
+
   // Move focus to the page title on navigation (WCAG focus-on-route-change).
   const firstRender = useRef(true);
   useEffect(() => {
@@ -289,7 +303,7 @@ export default function AppShell() {
         <Brand />
         <nav className="topnav" aria-label="Primary">
           {discover.items.map((i) => (
-            <NavLink key={i.to} to={i.to} end={i.end} className="topnav-link">
+            <NavLink key={i.to} to={i.to} end={i.end} className="topnav-link" data-tour={`nav-${i.label.toLowerCase()}`}>
               {i.label}
             </NavLink>
           ))}
@@ -312,9 +326,9 @@ export default function AppShell() {
           )}
         </nav>
         <div className="topbar-spacer" />
-        <IconButton icon={theme === 'dark' ? Sun : Moon} label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} onClick={() => setPreference(theme === 'dark' ? 'light' : 'dark')} />
+        <IconButton data-tour="theme" icon={theme === 'dark' ? Sun : Moon} label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} onClick={() => setPreference(theme === 'dark' ? 'light' : 'dark')} />
         <UserMenu />
-        <IconButton icon={navOpen ? X : List} label={navOpen ? 'Close navigation' : 'Open navigation'} className="menu-btn" onClick={() => setNavOpen((p) => !p)} aria-expanded={navOpen} aria-controls="mobile-nav" />
+        <IconButton icon={navOpen ? X : List} label={navOpen ? 'Close navigation' : 'Open navigation'} className="menu-btn" data-tour="menu" onClick={() => setNavOpen((p) => !p)} aria-expanded={navOpen} aria-controls="mobile-nav" />
         {navOpen && (
           <nav id="mobile-nav" className="mobile-nav" aria-label="Primary">
             {sections.map((s) => (
@@ -345,10 +359,14 @@ export default function AppShell() {
       <footer className="footer">
         <span>Campus Flow · Student organizations</span>
         <nav aria-label="Legal">
+          <button type="button" className="footer-link" onClick={startTour}>
+            Take the tour
+          </button>
           <Link to="/terms">Terms of use</Link>
           <Link to="/privacy">Privacy policy</Link>
         </nav>
       </footer>
+      {touring && <Tour steps={tourSteps(!!user)} onClose={() => setTouring(false)} />}
     </div>
   );
 }

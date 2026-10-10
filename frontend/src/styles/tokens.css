@@ -133,6 +133,10 @@
   --color-warning-soft: #f1e2c2;
   --color-error: #a1301f;
   --color-error-soft: #f2d9d0;
+  --color-success-vivid: #12b76a;
+  --color-success-vivid-deep: #039855;
+  --color-error-vivid: #f04438;
+  --color-error-vivid-deep: #d92d20;
   --color-info: #2c4a6b;
   --color-info-soft: #d9e1e8;
   --color-neutral-soft: #e4ddd0;
