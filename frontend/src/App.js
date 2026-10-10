@@ -2,9 +2,9 @@ import { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import AppShell from './layout/AppShell';
 import { RequireAuth, RequireClubRole } from './auth/guards';
-import { LoadingState } from './components/feedback';
+import { PageLoader } from './components/feedback';
 import { IS_DEMO } from './api/config';
-import Splash, { useSplash } from './components/Splash';
+import Splash from './components/Splash';
 
 const page = (loader) => lazy(loader);
 
@@ -60,16 +60,14 @@ const club = (roles, el) => (
 );
 
 export default function App() {
-  const splash = useSplash();
-  if (splash) return <Splash />;
-
   return (
-    <Suspense fallback={<LoadingState rows={6} />}>
+    <Suspense fallback={<PageLoader />}>
       <Routes>
+        <Route path="/" element={<Splash />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route element={<AppShell />}>
-          <Route index element={<Home />} />
+          <Route path="home" element={<Home />} />
           <Route path="events" element={<Events />} />
           <Route path="events/:eventId" element={<EventDetail />} />
           <Route path="clubs" element={<Clubs />} />

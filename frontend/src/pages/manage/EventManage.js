@@ -5,7 +5,7 @@ import { ArrowSquareOut, ChartBar, CheckCircle, Info, ListChecks, LockKey, Penci
 import { clubsApi, eventsApi, membershipsApi } from '../../api/endpoints';
 import { useAuth } from '../../auth/AuthProvider';
 import { Card, DescriptionList, PageHeader, StatCard, TabPanel, Tabs } from '../../components/layout';
-import { Alert, Badge, CardsSkeleton, EmptyState, ErrorState, LoadingState, ProgressBar, QueryState, StatusBadge } from '../../components/feedback';
+import { Alert, Badge, CardsSkeleton, EmptyState, ErrorState, ProgressBar, QueryState, StatusBadge, PageLoader } from '../../components/feedback';
 import { Button, IconButton } from '../../components/Button';
 import { DataTable, Pagination, Toolbar } from '../../components/DataTable';
 import { Field, Input, Select, Textarea } from '../../components/forms';
@@ -202,7 +202,7 @@ export default function EventManage() {
     },
   });
 
-  if (event.isPending) return <LoadingState rows={8} />;
+  if (event.isPending) return <PageLoader />;
   if (event.isError) return <div className="card"><ErrorState error={event.error} onRetry={() => event.refetch()} /></div>;
   const e = event.data;
   const isHead = hasRole(e.clubId, 'CLUB_HEAD');

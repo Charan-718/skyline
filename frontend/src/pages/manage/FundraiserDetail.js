@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, Plus, Prohibit, RocketLaunch, Warning } from '@phosphor-icons/react';
 import { fundraisersApi } from '../../api/endpoints';
 import { Card, PageHeader, StatCard } from '../../components/layout';
-import { Alert, Badge, ErrorState, LoadingState, ProgressBar, StatusBadge } from '../../components/feedback';
+import { Alert, Badge, ErrorState, ProgressBar, StatusBadge, PageLoader } from '../../components/feedback';
 import { Button } from '../../components/Button';
 import { ConfirmDialog } from '../../components/Modal';
 import { Money } from '../../components/domain';
@@ -47,7 +47,7 @@ export default function FundraiserDetail() {
       toast.error(e);
     },
   });
-  if (q.isPending) return <LoadingState rows={8} />;
+  if (q.isPending) return <PageLoader />;
   if (q.isError) return <div className="card"><ErrorState error={q.error} onRetry={() => q.refetch()} /></div>;
   const d = q.data;
   const f = d.fundraiser;

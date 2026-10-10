@@ -27,8 +27,8 @@ export function AuthProvider({ children }) {
     try {
       await authApi.logout();
     } finally {
-      qc.clear();
       qc.setQueryData(['me'], null);
+      qc.removeQueries({ predicate: (query) => query.queryKey[0] !== 'me' });
     }
   }, [qc]);
 

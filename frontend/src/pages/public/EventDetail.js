@@ -6,7 +6,7 @@ import { eventsApi } from '../../api/endpoints';
 import { useAuth } from '../../auth/AuthProvider';
 import { useIdempotencyKey } from '../../hooks';
 import { Card, DescriptionList, PageHeader } from '../../components/layout';
-import { Alert, Badge, ErrorState, LoadingState, ProgressBar, StatusBadge } from '../../components/feedback';
+import { Alert, Badge, ErrorState, LoadingState, ProgressBar, StatusBadge, PageLoader } from '../../components/feedback';
 import { Button } from '../../components/Button';
 import { Money } from '../../components/domain';
 import { ConfirmDialog } from '../../components/Modal';
@@ -92,7 +92,7 @@ function QuoteCard({ event }) {
   return (
     <Card title="Your price" description="Calculated for you by the server, including any member benefits.">
       {quote.isPending ? (
-        <LoadingState rows={3} />
+        <LoadingState />
       ) : quote.isError ? (
         <ErrorState error={quote.error} onRetry={() => quote.refetch()} />
       ) : (
@@ -150,7 +150,7 @@ export default function EventDetail() {
   const { eventId } = useParams();
   const event = useQuery({ queryKey: ['event', eventId], queryFn: () => eventsApi.get(eventId) });
 
-  if (event.isPending) return <LoadingState rows={8} />;
+  if (event.isPending) return <PageLoader />;
   if (event.isError) return <div className="card"><ErrorState error={event.error} onRetry={() => event.refetch()} /></div>;
   const e = event.data;
   const soldPct = (e.seatsReserved / e.capacity) * 100;

@@ -6,7 +6,7 @@ import { paymentsApi } from '../../api/endpoints';
 import { useAuth } from '../../auth/AuthProvider';
 import { useIdempotencyKey } from '../../hooks';
 import { Card, DescriptionList, PageHeader } from '../../components/layout';
-import { Alert, ErrorState, LoadingState, StatusBadge } from '../../components/feedback';
+import { Alert, ErrorState, StatusBadge, PageLoader } from '../../components/feedback';
 import { Button } from '../../components/Button';
 import { Money, SimulatedBanner } from '../../components/domain';
 import { useToast } from '../../components/Toast';
@@ -30,7 +30,7 @@ function nextStep(p) {
   if (t.kind === 'EVENT_TICKET') return p.status === 'SUCCEEDED' ? { to: `/me/tickets/${t.ticketId}`, label: 'View my ticket' } : { to: `/events/${t.eventId}`, label: 'Back to event' };
   if (t.kind === 'MERCH_ORDER') return { to: `/me/orders/${t.orderId}`, label: p.status === 'SUCCEEDED' ? 'View order & pickup code' : 'View order' };
   if (t.kind === 'MEMBERSHIP') return { to: `/me/memberships/${t.membershipId}`, label: 'View membership' };
-  return { to: '/', label: 'Home' };
+  return { to: '/home', label: 'Home' };
 }
 
 function Result({ payment }) {
@@ -82,7 +82,7 @@ export default function Checkout() {
     },
   });
 
-  if (payment.isPending) return <LoadingState rows={8} />;
+  if (payment.isPending) return <PageLoader />;
   if (payment.isError) return <div className="card"><ErrorState error={payment.error} onRetry={() => payment.refetch()} /></div>;
   const p = payment.data;
   const settled = ['SUCCEEDED', 'FAILED', 'EXPIRED'].includes(p.status);

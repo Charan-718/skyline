@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Archive, IdentificationBadge, PencilSimple, Plus } from '@phosphor-icons/react';
 import { membershipsApi } from '../../api/endpoints';
 import { PageHeader } from '../../components/layout';
-import { Alert, EmptyState, LoadingState, QueryState, StatusBadge } from '../../components/feedback';
+import { Alert, EmptyState, QueryState, StatusBadge, PageLoader } from '../../components/feedback';
 import { Button } from '../../components/Button';
 import { Checkbox, Field, Input, MoneyInput, Textarea, required, useForm } from '../../components/forms';
 import { ConfirmDialog, Modal } from '../../components/Modal';
@@ -107,7 +107,7 @@ export default function Plans() {
   return (
     <>
       <PageHeader title="Membership plans" description="Fees, durations and benefits offered to verified students." actions={<Button variant="primary" icon={Plus} onClick={() => setEditing(null)}>New plan</Button>} />
-      <QueryState query={plans} loading={<LoadingState rows={6} />} empty={<div className="card"><EmptyState icon={IdentificationBadge} title="No plans yet" action={<Button variant="primary" onClick={() => setEditing(null)}>Create the first plan</Button>}>Students can't join until there is at least one plan.</EmptyState></div>}>
+      <QueryState query={plans} loading={<PageLoader />} empty={<div className="card"><EmptyState icon={IdentificationBadge} title="No plans yet" action={<Button variant="primary" onClick={() => setEditing(null)}>Create the first plan</Button>}>Students can't join until there is at least one plan.</EmptyState></div>}>
         {(list) => (
           <ol className="ruled">
             {list.map((p) => (

@@ -5,7 +5,7 @@ import { Camera, CameraSlash, CheckCircle, IdentificationBadge, Keyboard, LockKe
 import { eventsApi, membershipsApi } from '../../api/endpoints';
 import { newIdempotencyKey } from '../../api/client';
 import { Card, PageHeader, Tabs } from '../../components/layout';
-import { Alert, EmptyState, ErrorState, LoadingState, ProgressBar, QueryState, StatusBadge } from '../../components/feedback';
+import { Alert, EmptyState, ErrorState, ProgressBar, QueryState, StatusBadge, PageLoader } from '../../components/feedback';
 import { Button } from '../../components/Button';
 import { Field, Input } from '../../components/forms';
 import { DataTable } from '../../components/DataTable';
@@ -263,7 +263,7 @@ export default function Scan() {
   const { eventId } = useParams();
   const [tab, setTab] = useState('tickets');
   const event = useQuery({ queryKey: ['event', eventId], queryFn: () => eventsApi.get(eventId) });
-  if (event.isPending) return <LoadingState rows={8} />;
+  if (event.isPending) return <PageLoader />;
   if (event.isError) return <div className="card"><ErrorState error={event.error} onRetry={() => event.refetch()} /></div>;
   const e = event.data;
   return (

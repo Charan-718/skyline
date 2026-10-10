@@ -142,7 +142,7 @@ function CartPanel({ clubId, cart, setCart }) {
               Sign in to check out
             </Button>
           ) : quote.isPending ? (
-            <LoadingState rows={2} />
+            <LoadingState />
           ) : quote.isError ? (
             <Alert tone="warning" action={<Button size="sm" onClick={() => quote.refetch()}>Retry</Button>}>{errorMessage(quote.error)}</Alert>
           ) : (

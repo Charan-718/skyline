@@ -45,7 +45,7 @@ function renderAt(path) {
 }
 
 const routes = () => [
-  ['/', /clubs, events & money/i],
+  ['/home', /clubs, events & money/i],
   ['/events', /^events$/i],
   [`/events/${ids.event}`, /skyline tech fest 2026/i],
   ['/clubs', /^clubs$/i],

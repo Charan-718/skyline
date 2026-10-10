@@ -2,6 +2,7 @@ import { ArrowClockwise, CheckCircle, Info, Tray, Warning, WarningCircle } from 
 import { statusOf } from '../utils/status';
 import { errorMessage } from '../utils/errorMessages';
 import { Button } from './Button';
+import { Logo } from './Brand';
 
 export function Badge({ tone = 'neutral', dot = true, children, className = '' }) {
   return <span className={`badge tone-${tone} ${dot ? '' : 'no-dot'} ${className}`}>{children}</span>;
@@ -34,15 +35,24 @@ export function Skeleton({ height = 16, width = '100%', style }) {
   return <span className="skeleton" style={{ height, width, ...style }} aria-hidden />;
 }
 
-export function LoadingState({ rows = 4, label = 'Loading…' }) {
+/**
+ * The Campus Flow star as a smooth rotating loader with breathing pulse.
+ */
+export function LogoLoader({ size = 64, label = 'Loading…', page = false }) {
   return (
-    <div className="stack-sm" style={{ padding: 'var(--space-4)' }} aria-busy="true" aria-live="polite">
+    <div className={`logo-loader${page ? ' logo-loader-page' : ''}`} role="status" aria-live="polite">
+      <Logo size={size} className="logo-loader-mark" />
       <span className="sr-only">{label}</span>
-      {Array.from({ length: rows }).map((_, i) => (
-        <Skeleton key={i} height={i === 0 ? 20 : 14} width={i === 0 ? '40%' : `${90 - i * 8}%`} />
-      ))}
     </div>
   );
+}
+
+/** Whole-page loading: route code, auth checks and pages waiting on their main record. */
+export const PageLoader = ({ size = 150, label }) => <LogoLoader size={size} label={label} page />;
+
+/** Loading inside a section of a page. */
+export function LoadingState({ size = 88, label }) {
+  return <LogoLoader size={size} label={label} />;
 }
 
 export function CardsSkeleton({ count = 4 }) {

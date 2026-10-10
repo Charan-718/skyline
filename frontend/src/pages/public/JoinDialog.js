@@ -60,7 +60,7 @@ export default function JoinDialog({ open, onClose, club, membershipId }) {
       }
     >
       {plans.isPending ? (
-        <LoadingState rows={4} />
+        <LoadingState />
       ) : plans.isError ? (
         <ErrorState error={plans.error} onRetry={() => plans.refetch()} />
       ) : (

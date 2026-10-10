@@ -6,87 +6,15 @@
 /* ═════════════ App shell ═════════════ */
 .shell {
   min-height: 100dvh;
-  display: grid;
-  grid-template-columns: 1fr;
-}
-
-@media (min-width: 1024px) {
-  .shell {
-    grid-template-columns: 76px minmax(0, 1fr);
-    transition: grid-template-columns var(--duration-slow) var(--ease-emphasized);
-  }
-  .shell[data-nav-open='true'] {
-    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-  }
-}
-
-.sidebar {
-  position: fixed;
-  inset: 0 auto 0 0;
-  width: min(84vw, var(--sidebar-width));
-  background: var(--color-bg);
-  border-right: 1px solid var(--color-border-strong);
   display: flex;
   flex-direction: column;
-  z-index: var(--z-modal);
-  transform: translateX(-100%);
-  transition: transform var(--duration-slow) var(--ease-emphasized);
-}
-
-.sidebar[data-open='true'] {
-  transform: translateX(0);
-  box-shadow: var(--shadow-lg);
-}
-
-@media (min-width: 1024px) {
-  .sidebar {
-    position: sticky;
-    top: 0;
-    height: 100dvh;
-    width: auto;
-    transform: none;
-    z-index: auto;
-    border-right-color: var(--color-border);
-    overflow-x: hidden;
-  }
-  
-  .shell:not([data-nav-open='true']) .sidebar .brand-word,
-  .shell:not([data-nav-open='true']) .sidebar .nav-heading,
-  .shell:not([data-nav-open='true']) .sidebar .nav-link span {
-    display: none;
-  }
-  
-  .shell:not([data-nav-open='true']) .sidebar .nav-link {
-    justify-content: center;
-    padding: var(--space-2);
-  }
-  
-  .shell:not([data-nav-open='true']) .sidebar .brand {
-    justify-content: center;
-    padding: 0;
-  }
-}
-
-.sidebar-scrim {
-  position: fixed;
-  inset: 0;
-  background: var(--color-scrim);
-  z-index: var(--z-overlay);
-}
-
-@media (min-width: 1024px) {
-  .sidebar-scrim {
-    display: none;
-  }
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  height: var(--header-height);
-  padding: 0 var(--space-5);
-  border-bottom: 1px solid var(--color-border-strong);
+  flex: none;
   color: var(--color-text-primary);
 }
 
@@ -106,12 +34,6 @@
   line-height: 1;
   letter-spacing: 0.01em;
   white-space: nowrap;
-}
-
-.nav {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-4) var(--space-3) var(--space-6);
 }
 
 .nav-section + .nav-section {
@@ -160,18 +82,13 @@
   color: var(--color-accent);
 }
 
-.sidebar-footer {
-  border-top: 1px solid var(--color-border);
-  padding: var(--space-4);
-}
-
 .topbar {
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   height: var(--header-height);
   padding: 0 var(--space-4);
   background: var(--color-bg);
@@ -181,18 +98,111 @@
 @media (min-width: 1024px) {
   .topbar {
     padding: 0 var(--space-8);
-    border-bottom-color: var(--color-border);
+  }
+}
+
+/* Inline links: shown once there is room for every section side by side. */
+.topnav {
+  display: none;
+  align-self: stretch;
+  margin-left: var(--space-6);
+}
+
+.topnav-menu {
+  position: relative;
+  display: flex;
+}
+
+.topnav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-block: 2px solid transparent;
+  background: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+}
+
+.topnav-link:hover {
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+/* Current page or section: ink text with a violet underline. */
+.topnav-link[aria-current='page'],
+.topnav-link[data-current] {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  border-bottom-color: var(--color-accent);
+}
+
+.topnav-menu .menu {
+  top: calc(100% + 1px);
+  max-height: calc(100dvh - var(--header-height) - var(--space-8));
+  overflow-y: auto;
+}
+
+.menu-item[aria-current='page'] {
+  background: var(--color-surface-interactive);
+  font-weight: var(--font-weight-semibold);
+}
+
+.menu-item[aria-current='page'] svg {
+  color: var(--color-accent);
+}
+
+/* Below the inline breakpoint the sections drop down as a panel under the bar. */
+.mobile-nav {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-5) var(--space-6);
+  max-height: calc(100dvh - var(--header-height));
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-4) var(--space-6);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border-strong);
+  box-shadow: var(--shadow-lg);
+}
+
+.mobile-nav .nav-section + .nav-section {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.mobile-nav-clubs {
+  margin-bottom: var(--space-2);
+}
+
+@media (min-width: 1200px) {
+  .topnav {
+    display: flex;
+  }
+  .topbar .menu-btn,
+  .mobile-nav {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .brand-word {
+    font-size: var(--font-size-lg);
   }
 }
 
 .topbar-spacer {
   flex: 1;
-}
-
-.main {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
 }
 
 .content {
@@ -1686,7 +1696,8 @@ button.task-card:hover {
 }
 
 .menu-item:hover,
-.menu-item[aria-checked='true'] {
+.menu-item[aria-checked='true'],
+.menu-item[aria-pressed='true'] {
   background: var(--color-surface-interactive);
   text-decoration: none;
 }
@@ -1728,6 +1739,7 @@ button.task-card:hover {
 
 /* Home masthead: italic serif lead-in, display headline, mono tag line. */
 .hero {
+  position: relative;
   padding: var(--space-4) 0 var(--space-8);
   border-bottom: 1px solid var(--color-border-strong);
 }
@@ -1762,6 +1774,71 @@ button.task-card:hover {
   font-family: var(--font-family-mono);
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
+}
+
+/* Overlapping, tilted photo collage filling the right side of the masthead. */
+.hero-collage {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: var(--space-8);
+  width: 46%;
+}
+
+.hero-shot {
+  position: absolute;
+  width: 62%;
+  height: auto;
+  border: 6px solid var(--color-surface, #fff);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hero-shot-a {
+  top: 4%;
+  left: 2%;
+  transform: rotate(-7deg);
+  z-index: 1;
+}
+
+.hero-shot-b {
+  bottom: 2%;
+  right: 0;
+  transform: rotate(6deg);
+  z-index: 2;
+}
+
+.hero-shot-c {
+  top: 50%;
+  left: 50%;
+  width: 66%;
+  transform: translate(-50%, -50%) rotate(-2deg);
+  z-index: 3;
+}
+
+/* On hover the stack fans out diagonally: top card up-left, bottom card down-right. */
+.hero-collage:hover .hero-shot-a {
+  transform: translate(-62%, -8%) rotate(-10deg);
+}
+
+.hero-collage:hover .hero-shot-b {
+  transform: translate(28%, -14%) rotate(15deg);
+}
+
+.hero-collage:hover .hero-shot-c {
+  transform: translate(-78%, -20%) rotate(-2deg) scale(1.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-shot {
+    transition: none;
+  }
+}
+
+@media (max-width: 960px) {
+  .hero-collage {
+    display: none;
+  }
 }
 
 .date-tile {
@@ -1823,6 +1900,9 @@ button.task-card:hover {
   .hide-mobile {
     display: initial;
   }
+  .btn.hide-mobile {
+    display: inline-flex;
+  }
   th.hide-mobile,
   td.hide-mobile {
     display: table-cell;
@@ -1838,79 +1918,262 @@ button.task-card:hover {
   margin-top: calc(-1 * var(--space-6));
 }
 
-/* ── Launch screen ─────────────────────────────── */
+/* ── Launch screen: the NMIT poster ─────────────── */
 .splash {
   position: fixed;
   inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--color-poster-bg);
+  color: var(--color-poster-ink);
+  font-family: var(--font-family-poster);
+  --splash-gutter: clamp(var(--space-4), 8vw, 150px);
+  animation: splash-in 500ms var(--ease-standard) both;
+}
+
+.splash p,
+.splash ul {
+  margin: 0;
+}
+
+/* Text sits above the art, which spans the rows behind it as in the poster. */
+.splash-head,
+.splash-foot {
+  position: relative;
+  z-index: 1;
+  grid-column: 1;
   display: flex;
-  flex-direction: column;
   justify-content: space-between;
-  align-items: center;
-  overflow: hidden;
-  background: var(--color-splash-bg);
-  color: var(--color-splash-text);
-  padding-top: clamp(var(--space-12), 14vh, var(--space-24));
+  align-items: flex-start;
+  gap: var(--space-6);
+  padding: clamp(var(--space-6), 7vh, 110px) var(--splash-gutter) 0;
 }
 
-.splash-brand {
+.splash-head {
+  grid-row: 1;
+}
+
+.splash-foot {
+  grid-row: 3;
+  align-items: flex-end;
+  padding-top: var(--space-4);
+}
+
+.splash-nmit {
+  font-size: clamp(2.75rem, 6.2vw, 6rem);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+  letter-spacing: 0.42em;
+  margin-right: -0.42em;
+}
+
+.splash .splash-sub {
+  margin-top: var(--space-4);
+  font-size: clamp(0.75rem, 1.15vw, 1.1rem);
+  line-height: 1.5;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+}
+
+.splash-no,
+.splash-year,
+.splash-list {
+  font-size: clamp(0.6875rem, 0.85vw, 0.8125rem);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.splash .splash-no {
+  margin-top: var(--space-5);
+}
+
+.splash-rule,
+.splash-foot .splash-list::after {
+  display: block;
+  width: 64px;
+  height: 1px;
+  margin-top: var(--space-5);
+  background: var(--color-poster-ink);
+  opacity: 0.6;
+  content: '';
+}
+
+.splash-meta {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
-  padding: 0 var(--space-4);
-  text-align: center;
-  animation: splash-in 600ms var(--ease-emphasized) both;
+  align-items: flex-end;
+  gap: clamp(var(--space-6), 6vh, var(--space-16));
 }
 
-.splash-word {
-  font-family: var(--font-family-brand);
-  font-size: var(--font-size-display);
-  line-height: 1;
-  letter-spacing: 0.01em;
+.splash-list {
+  list-style: none;
+  padding: 0;
+  line-height: 2.1;
 }
 
-.splash-tag {
-  font-family: var(--font-family-serif);
-  font-style: italic;
-  font-size: var(--font-size-lg);
-  color: var(--color-splash-muted);
-  text-wrap: balance;
+.splash-list-ruled {
+  align-self: flex-start;
+  padding-left: var(--space-6);
+  border-left: 1px solid var(--color-poster-ink);
 }
 
-.splash-progress {
-  display: block;
-  width: 160px;
-  height: 2px;
-  margin-top: var(--space-4);
-  background: var(--color-splash-track);
+/* The art box keeps the poster's proportions and scales to the space it is given. */
+.splash-stage {
+  grid-row: 1 / 4;
+  grid-column: 1;
+  container-type: size;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: clamp(var(--space-16), 23vh, 260px) var(--space-4) clamp(var(--space-4), 7vh, var(--space-20));
+}
+
+.splash-art {
+  position: relative;
+  width: min(100cqw, 191cqh, 1400px);
+  aspect-ratio: 1280 / 670;
   overflow: hidden;
 }
 
-.splash-progress::after {
-  content: '';
-  display: block;
-  height: 100%;
-  background: var(--color-splash-text);
-  transform-origin: left;
-  animation: splash-progress var(--splash-ms, 5s) linear both;
+.splash-art > * {
+  position: absolute;
+}
+
+.splash-block,
+.splash-sun {
+  mix-blend-mode: multiply;
+  animation: splash-in 900ms var(--ease-standard) both;
+}
+
+/* Slow, small drift + fade so the colour boxes stay alive for the whole splash. */
+.splash-block {
+  animation:
+    splash-in 900ms var(--ease-standard) both,
+    splash-drift var(--dur, 5s) ease-in-out var(--delay, 0s) infinite alternate;
+}
+
+.splash-blue {
+  background: var(--color-poster-blue);
+  opacity: 0.45;
+}
+
+.splash-blue-soft {
+  background: var(--color-poster-blue-soft);
+  opacity: 0.4;
+}
+
+.splash-peach {
+  background: var(--color-poster-peach);
+  opacity: 0.35;
+}
+
+.splash-peach-soft {
+  background: var(--color-poster-peach-soft);
+  opacity: 0.4;
+}
+
+.splash-sun {
+  left: 58%;
+  top: 0.3%;
+  width: 19.5%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: linear-gradient(to bottom, var(--color-poster-sun-top), var(--color-poster-sun-bottom));
+  opacity: 0.85;
 }
 
 .splash-campus {
-  display: block;
-  width: min(100%, 1280px);
+  left: 0;
+  bottom: 18.7%;
+  width: 100%;
   height: auto;
-  max-height: 58vh;
-  object-fit: contain;
-  object-position: bottom;
   animation: splash-in 900ms var(--ease-standard) 150ms both;
 }
 
-/* Phones: keep the building a readable size and let the sides crop. */
+/* Mirror of the photo in the "water" below the ground line, fading out quickly. */
+.splash-reflection {
+  left: 0;
+  top: 81.3%;
+  width: 100%;
+  height: auto;
+  transform: scaleY(-1);
+  opacity: 0.32;
+  filter: blur(1.5px);
+  mix-blend-mode: multiply;
+  -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 26%);
+  mask-image: linear-gradient(to top, #000 0%, transparent 26%);
+}
+
+.splash-line {
+  background: var(--color-poster-rule);
+}
+
+.splash-line-v {
+  width: 1px;
+}
+
+.splash-line-h {
+  height: 1px;
+}
+
+.splash-loading {
+  grid-row: 4;
+  padding: clamp(var(--space-5), 4vh, var(--space-10)) var(--space-6) var(--space-6);
+}
+
+.splash-bar {
+  display: flex;
+  gap: clamp(6px, 1vw, 14px);
+  height: clamp(18px, 3vh, 28px);
+  padding: 0 var(--space-2);
+}
+
+.splash-bar span {
+  flex: 1;
+  border: 2px solid var(--color-poster-ink);
+  transform: skewX(-28deg);
+  opacity: 0;
+  animation: splash-segment 1ms linear both;
+  animation-delay: calc(var(--splash-ms, 5s) * var(--i) / var(--splash-segments, 18));
+}
+
+.splash .splash-loading-label {
+  margin-top: var(--space-3);
+  text-align: center;
+  font-family: var(--font-family-sans);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-md);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
 @media (max-width: 640px) {
-  .splash-campus {
-    width: auto;
-    max-width: none;
-    height: 38vh;
+  .splash-head {
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  .splash-meta {
+    display: none;
+  }
+  .splash-nmit {
+    letter-spacing: 0.3em;
+    margin-right: -0.3em;
+  }
+  .splash-list-end {
+    text-align: right;
+  }
+  .splash-stage {
+    grid-row: 2;
+    padding-block: var(--space-4);
+  }
+  /* Crop the sides so the building stays a readable size. */
+  .splash-art {
+    --art-w: min(165cqw, 191cqh);
+    width: var(--art-w);
+    justify-self: start;
+    margin-left: calc((100cqw - var(--art-w)) / 2);
   }
 }
 
@@ -1920,8 +2183,71 @@ button.task-card:hover {
   }
 }
 
-@keyframes splash-progress {
+@keyframes splash-drift {
   from {
-    transform: scaleX(0);
+    transform: translate(calc(var(--dx, 16px) * -1), calc(var(--dy, 16px) * -1)) rotate(calc(var(--rot, 1deg) * -1));
+    opacity: 0.32;
+  }
+  to {
+    transform: translate(var(--dx, 16px), var(--dy, 16px)) rotate(var(--rot, 1deg));
+    opacity: 0.5;
+  }
+}
+
+@keyframes splash-segment {
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Logo loader ───────────────────────────────── */
+.logo-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+  gap: var(--space-4);
+}
+
+.logo-loader-page {
+  min-height: 65vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/*
+ * Smooth continuous clockwise rotation with a gentle breathing pulse and ambient glow.
+ * The origin is the star's optical center (50% 54.8%).
+ */
+.logo-loader-mark {
+  transform-origin: 50% 54.8%;
+  animation: logo-turn 2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+@keyframes logo-turn {
+  0% {
+    transform: rotate(0deg) scale(1);
+    filter: drop-shadow(0 0 10px rgba(62, 99, 214, 0.15));
+  }
+  50% {
+    transform: rotate(180deg) scale(1.12);
+    filter: drop-shadow(0 0 24px rgba(62, 99, 214, 0.38));
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+    filter: drop-shadow(0 0 10px rgba(62, 99, 214, 0.15));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-block {
+    animation: splash-in 900ms var(--ease-standard) both;
+  }
+  .logo-loader-mark {
+    animation: none;
+    transform: none;
   }
 }

@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { eventsApi } from '../../api/endpoints';
 import { DescriptionList, PageHeader } from '../../components/layout';
-import { Alert, ErrorState, LoadingState, StatusBadge } from '../../components/feedback';
+import { Alert, ErrorState, StatusBadge, PageLoader } from '../../components/feedback';
 import { Money, QrCode } from '../../components/domain';
 import { formatDateTime } from '../../utils/dates';
 import { label } from '../../utils/status';
@@ -10,7 +10,7 @@ import { label } from '../../utils/status';
 export default function TicketDetail() {
   const { ticketId } = useParams();
   const q = useQuery({ queryKey: ['ticket', ticketId], queryFn: () => eventsApi.myTicket(ticketId) });
-  if (q.isPending) return <LoadingState rows={8} />;
+  if (q.isPending) return <PageLoader />;
   if (q.isError) return <div className="card"><ErrorState error={q.error} onRetry={() => q.refetch()} /></div>;
   const t = q.data;
   return (
