@@ -1,0 +1,60 @@
+# Student Organization Management System — dev stack (LLD §1.1).
+# Backend only for Group 2 (OQ-02). The frontend service is added by T-14.
+name: soms
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: soms
+      POSTGRES_PASSWORD: soms
+      POSTGRES_DB: soms
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U soms -d soms && psql -U soms -d soms_test -c 'select 1' >/dev/null"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 4000
+      DATABASE_URL: postgres://soms:soms@db:5432/soms
+      TEST_DATABASE_URL: postgres://soms:soms@db:5432/soms_test
+      # TODO(group1): delete when Group 1 merges. `fixture` applies tests/fixtures/group1_schema.sql
+      # in place of Group 1 migrations 002/003/006/007 (OQ-01).
+      GROUP1_SCHEMA: ${GROUP1_SCHEMA:-fixture}
+      LLD_PATH: /docs/LLD.md
+      UPLOAD_DIR: /app/uploads
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    volumes:
+      - ./backend:/app
+      - backend_node_modules:/app/node_modules
+      - uploads:/app/uploads
+      - ./docs:/docs:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/api/v1/health | grep -q '\"db\":\"ok\"'"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+volumes:
+  pgdata:
+  uploads:
+  backend_node_modules:

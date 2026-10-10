@@ -1,0 +1,45 @@
+{
+  "name": "soms-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20 <21"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "migrate:latest": "knex migrate:latest",
+    "migrate:rollback": "knex migrate:rollback --all",
+    "migrate:status": "knex migrate:status",
+    "lint": "npm run lint:eslint && npm run lint:deps && npm run lint:money",
+    "lint:deps": "depcruise src --config .dependency-cruiser.cjs",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:concurrency": "vitest run tests/concurrency",
+    "lint:eslint": "eslint .",
+    "lint:money": "SKIP_DB_SETUP=1 vitest run tests/unit/noFloatMoney.test.js"
+  },
+  "dependencies": {
+    "connect-pg-simple": "10.0.0",
+    "express": "5.1.0",
+    "express-rate-limit": "7.5.1",
+    "express-session": "1.18.2",
+    "file-type": "21.0.0",
+    "helmet": "8.1.0",
+    "knex": "3.1.0",
+    "multer": "2.0.2",
+    "node-cron": "4.2.1",
+    "pg": "8.16.3",
+    "pino": "9.9.0",
+    "qrcode": "1.5.4",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.1",
+    "dependency-cruiser": "16.10.4",
+    "eslint": "9.39.1",
+    "supertest": "7.1.4",
+    "vitest": "3.2.4"
+  }
+}
