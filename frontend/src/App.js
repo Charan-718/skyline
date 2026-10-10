@@ -17,6 +17,7 @@ const Clubs = page(() => import('./pages/public/Clubs'));
 const ClubPage = page(() => import('./pages/public/ClubPage'));
 const Announcements = page(() => import('./pages/public/Announcements'));
 const Shop = page(() => import('./pages/public/Shop'));
+const ShopCart = page(() => import('./pages/public/ShopCart'));
 const Checkout = page(() => import('./pages/checkout/Checkout'));
 const Profile = page(() => import('./pages/me/Profile'));
 const MyMemberships = page(() => import('./pages/me/Memberships'));
@@ -74,6 +75,7 @@ export default function App() {
           <Route path="clubs/:clubId" element={<ClubPage />} />
           <Route path="announcements" element={<Announcements />} />
           <Route path="shop/:clubId" element={<Shop />} />
+          <Route path="shop/:clubId/cart" element={<ShopCart />} />
           <Route path="checkout/:paymentId" element={auth(<Checkout />)} />
 
           <Route path="me/profile" element={auth(<Profile />)} />
