@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import { createTestApp } from '../helpers/testApp.js';
 import { getTestDb, migrateTestDb, truncateTestDb } from '../helpers/testDb.js';
-import { createUser, createClub } from '../helpers/factories.js';
+import { createUser, createClub, verifyStudent } from '../helpers/factories.js';
 import { v4 as uuidv4 } from 'uuid';
 
 describe('events booking', () => {
@@ -17,8 +17,9 @@ describe('events booking', () => {
   });
 
   it('books event with payment flow', async () => {
-    const head = await createUser(db, { email: `head-${Date.now()}@test.srkr.ac.in` });
-    const buyer = await createUser(db, { email: `buyer-${Date.now()}@test.srkr.ac.in` });
+    const head = await createUser(db, { email: `head-${Date.now()}@test.skyline.ac.in` });
+    await verifyStudent(db, head.id);
+    const buyer = await createUser(db, { email: `buyer-${Date.now()}@test.skyline.ac.in` });
     const club = await createClub(db);
 
     await db('club_role_assignments').insert({

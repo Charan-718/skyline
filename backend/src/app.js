@@ -35,6 +35,22 @@ export function createApp(container) {
     }
   });
 
+  if (config.devToolsEnabled) {
+    app.get('/api/v1/dev/college-roster', async (_req, res) => {
+      const { listMockCollegeStudents } = await import(
+        './modules/auth/verification/MockCollegeVerificationAdapter.js'
+      );
+      res.json({
+        data: {
+          source: 'students.mock.json',
+          note:
+            'Universal register: non-college emails become outsiders. College-domain emails are checked against this roster (email + fullName); optional studentIdentifier. POST /me/college-verification to retry.',
+          students: listMockCollegeStudents(),
+        },
+      });
+    });
+  }
+
   const api = express.Router();
   Object.values(container.routes).forEach((router) => api.use(router));
   app.use('/api/v1', api);

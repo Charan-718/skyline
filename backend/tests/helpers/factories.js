@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import { randomToken } from '../../src/shared/tokens.js';
 
 export async function createUser(db, overrides = {}) {
-  const email = overrides.email ?? `user-${randomToken(4)}@test.srkr.ac.in`;
+  const email = overrides.email ?? `user-${randomToken(4)}@test.skyline.ac.in`;
   const passwordHash = await bcrypt.hash(overrides.password ?? 'TestPass123!', 12);
   const [user] = await db('users')
     .insert({

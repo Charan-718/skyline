@@ -3,7 +3,7 @@ import { regenerateSession } from '../../shared/middleware/session.js';
 export function createAuthController({ authService }) {
   return {
     async register(req, res) {
-      const user = await authService.register(req.body);
+      const user = await authService.register(req.body, req.requestId);
       req.session.userId = user.id;
       res.status(201).json({ data: user });
     },

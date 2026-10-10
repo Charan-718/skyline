@@ -9,6 +9,7 @@ cp ../.env.example ../.env   # or export DATABASE_URL
 cd backend
 npm install
 npm run migrate
+npm run seed                 # no-op; college roster is fixtures/students.mock.json (see verification/fixtures/README.md)
 npm start                    # http://localhost:4000/api/v1/health
 ```
 
@@ -18,11 +19,15 @@ PostgreSQL 16 required. Tests use `TEST_DATABASE_URL` or `DATABASE_URL` (databas
 npm test
 ```
 
+## API testing (Postman / cURL)
+
+Import **`postman/SOMS-Group1.postman_collection.json`** and **`postman/SOMS-Local.postman_environment.json`**. Step-by-step cURLs: **`postman/CURL-WALKTHROUGH.md`**. Before publishing events, run **`postman/setup-organizer.sql`** (organizer routes not wired yet).
+
 ## CLI (ASM-01)
 
 ```bash
 npm run cli -- create-club --slug skyline --name "Skyline Association" --prefix SKY
-npm run cli -- assign-club-head --club-id <uuid> --email head@srkr.ac.in
+npm run cli -- assign-club-head --club-id <uuid> --email head@skyline.ac.in
 ```
 
 ## Module layout

@@ -11,6 +11,8 @@ export const registerBody = z.object({
   password: z.string().min(8),
   fullName: z.string().min(2).max(100),
   phoneE164: phoneE164,
+  /** If set, mock/real college adapter runs at signup to mark VERIFIED vs outsider. */
+  studentIdentifier: z.string().min(1).optional(),
 });
 
 export const loginBody = z.object({
