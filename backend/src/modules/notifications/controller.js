@@ -14,6 +14,7 @@ export function createNotificationController({ notifications }) {
         destination: row.destination,
         subject: message.subject,
         text: message.text,
+        html: message.html ?? null,
         status: row.status,
         attempts: row.attempts,
         lastError: row.last_error,

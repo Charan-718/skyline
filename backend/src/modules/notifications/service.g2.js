@@ -64,7 +64,12 @@ export function createNotificationService({ db, clock, auth, adapters, logger })
       // one queued by Group 1) fails alone instead of aborting the whole dispatcher pass.
       const message = render(row.template, row.payload);
       const adapter = adapters[row.channel];
-      const sent = await adapter.send({ to: row.destination, subject: message.subject, text: message.text });
+      const sent = await adapter.send({
+        to: row.destination,
+        subject: message.subject,
+        text: message.text,
+        html: message.html,
+      });
       await repository.markSent(db, row.id, { ...sent, now });
       return 'sent';
     } catch (err) {

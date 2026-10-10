@@ -1,4 +1,11 @@
 import { z } from 'zod';
+import {
+  htmlAnnouncement,
+  htmlAutopayResult,
+  htmlBookingConfirmed,
+  htmlLowStockAlert,
+  htmlRenewalReminder7d,
+} from './templateHtml.js';
 
 // Notification templates (LLD §2.7; OQ-18). Each template has a payload schema checked at enqueue
 // time and a renderer used by the dispatcher and the dev outbox. Payloads never carry QR tokens,
@@ -30,11 +37,17 @@ export const TEMPLATE_SCHEMAS = Object.freeze({
 export const TEMPLATES = Object.freeze(Object.keys(TEMPLATE_SCHEMAS));
 export const CHANNELS = Object.freeze(['EMAIL']);
 
+function renewalWhen(p) {
+  return p.daysLeft === undefined ? `on ${p.expiresOn}` : `in ${p.daysLeft} day${p.daysLeft === 1 ? '' : 's'} (${p.expiresOn})`;
+}
+
 const RENDERERS = {
-  ANNOUNCEMENT: (p) => ({ subject: `[${p.clubName}] ${p.title}`, text: `${p.body}${p.link ? `\n\n${p.link}` : ''}` }),
-  // Two mails: AutoPay members are told the renewal will happen by itself; everyone else is asked to renew.
+  ANNOUNCEMENT: (p) => {
+    const text = `${p.body}${p.link ? `\n\n${p.link}` : ''}`;
+    return { subject: `[${p.clubName}] ${p.title}`, text, html: htmlAnnouncement(p) };
+  },
   RENEWAL_REMINDER_7D: (p) => {
-    const when = p.daysLeft === undefined ? `on ${p.expiresOn}` : `in ${p.daysLeft} day${p.daysLeft === 1 ? '' : 's'} (${p.expiresOn})`;
+    const when = renewalWhen(p);
     if (p.autopayEnabled) {
       return {
         subject: `${p.clubName}: AutoPay will renew your membership ${when}`,
@@ -42,6 +55,7 @@ const RENDERERS = {
           `Your ${p.clubName} membership (${p.planName}) ends ${when}.\n` +
           `AutoPay is switched on, so your renewal will be triggered automatically on ${p.expiresOn}. You do not need to do anything.\n` +
           `If you would rather not renew, turn AutoPay off before then: ${p.renewUrl}\n`,
+        html: htmlRenewalReminder7d(p),
       };
     }
     return {
@@ -49,6 +63,7 @@ const RENDERERS = {
       text:
         `Your ${p.clubName} membership (${p.planName}) expires ${when}.\n` +
         `Renew now to keep your member benefits: ${p.renewUrl}\n`,
+      html: htmlRenewalReminder7d(p),
     };
   },
   AUTOPAY_RESULT: (p) => ({
@@ -58,14 +73,17 @@ const RENDERERS = {
       (p.expiresOn ? ` Membership valid until ${p.expiresOn}.` : '') +
       (p.reason ? ` Reason: ${p.reason}.` : '') +
       (p.outcome === 'SUCCEEDED' ? '' : `\nRenew manually: ${p.renewUrl}`),
+    html: htmlAutopayResult(p),
   }),
   BOOKING_CONFIRMED: (p) => ({
     subject: `Booking confirmed: ${p.eventTitle}`,
     text: `Your ticket ${p.ticketCode} for ${p.eventTitle} (${p.startsAt}, ${p.venue}) is confirmed.\nView it: ${p.ticketUrl}`,
+    html: htmlBookingConfirmed(p),
   }),
   LOW_STOCK_ALERT: (p) => ({
     subject: `Low stock: ${p.productName} (${p.sizeLabel})`,
     text: `${p.productName} size ${p.sizeLabel} has ${p.available} available (threshold ${p.threshold}).\nInventory: ${p.inventoryUrl}`,
+    html: htmlLowStockAlert(p),
   }),
 };
 
@@ -78,7 +96,7 @@ export function validatePayload(template, payload) {
   return parsed.data;
 }
 
-/** { subject, text }. */
+/** { subject, text, html }. */
 export function render(template, payload) {
   return RENDERERS[template](payload);
 }

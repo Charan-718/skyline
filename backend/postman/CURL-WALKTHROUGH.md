@@ -164,6 +164,24 @@ curl -s "$BASE/announcements" | jq
 curl -s -b "$COOKIES" "$BASE/events/$EVENT_ID/report" | jq
 ```
 
+## 8. Dev jobs — renewal reminder emails
+
+Requires `DEV_TOOLS_ENABLED=true`. **Log in first** (`-c` writes the session cookie; `-b` sends it on later calls).
+
+```bash
+# Session (demo or QA seed users — password demo1234)
+curl -s -c "$COOKIES" -b "$COOKIES" -X POST "$BASE/auth/login" \
+  -H "Content-Type: application/json" -H "$CSRF" \
+  -d '{"email":"asha@skyline.ac.in","password":"demo1234"}' | jq
+
+# Queue + send 7-day renewal emails (NOTIFY_MODE=smtp for real inbox delivery)
+curl -s -b "$COOKIES" -X POST "$BASE/dev/jobs/renewal-reminders/run" \
+  -H "Content-Type: application/json" -H "$CSRF" \
+  -d '{"resend":true,"dispatch":true}' | jq
+```
+
+QA users from seed `005_renewal_reminder_test_users.js` have Skyline memberships expiring in **7 days IST** (charan06082004@gmail.com, koushikt33@gmail.com, nikkath23bcs60@iiitkottayam.ac.in, sspavancharan@gmail.com).
+
 ## Not yet exposed in HTTP (LLD only)
 
-These exist in docs/DB but have **no routes** in this Group 1 slice yet: event organizers/staff CRUD, `/me/tickets`, club member list, AutoPay PUT, `/dev/jobs`, archive plan, etc. Use Postman collection folder names as the source of truth for **implemented** endpoints.
+Some LLD endpoints are still route-only in Postman; use the collection for the full **implemented** list.
