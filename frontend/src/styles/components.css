@@ -2146,7 +2146,7 @@ button.task-card:hover {
   stroke-dasharray: 100;
   stroke-dashoffset: 100;
   animation: logo-arm-draw 2.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-  animation-delay: calc(var(--arm-index, 0) * 0.04s);
+  animation-delay: calc(var(--arm-index, 0) * 0.05s);
 }
 
 .logo-loader-mark .logo-arm-circle {
@@ -2155,7 +2155,7 @@ button.task-card:hover {
   opacity: 0;
   transform: scale(0);
   animation: logo-node-pop 2.6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
-  animation-delay: calc(var(--arm-index, 0) * 0.04s);
+  animation-delay: calc(var(--arm-index, 0) * 0.05s);
 }
 
 @keyframes logo-arm-draw {
@@ -2177,15 +2177,15 @@ button.task-card:hover {
 }
 
 @keyframes logo-node-pop {
-  0%, 22% {
+  0%, 20% {
     opacity: 0;
     transform: scale(0);
   }
-  44% {
+  42% {
     opacity: 1;
     transform: scale(1.35);
   }
-  54%, 76% {
+  52%, 76% {
     opacity: 1;
     transform: scale(1);
   }
@@ -2198,19 +2198,19 @@ button.task-card:hover {
 @keyframes logo-spin-flow {
   0% {
     transform: rotate(0deg) scale(0.92);
-    filter: drop-shadow(0 0 8px rgba(62, 99, 214, 0.15));
+    filter: drop-shadow(0 0 10px rgba(62, 99, 214, 0.15));
   }
   46% {
     transform: rotate(180deg) scale(1.08);
-    filter: drop-shadow(0 0 24px rgba(62, 99, 214, 0.42));
+    filter: drop-shadow(0 0 28px rgba(62, 99, 214, 0.45));
   }
   78% {
     transform: rotate(270deg) scale(1.02);
-    filter: drop-shadow(0 0 16px rgba(62, 99, 214, 0.25));
+    filter: drop-shadow(0 0 18px rgba(62, 99, 214, 0.25));
   }
   100% {
     transform: rotate(360deg) scale(0.92);
-    filter: drop-shadow(0 0 8px rgba(62, 99, 214, 0.15));
+    filter: drop-shadow(0 0 10px rgba(62, 99, 214, 0.15));
   }
 }
 

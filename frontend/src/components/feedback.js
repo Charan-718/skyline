@@ -48,7 +48,7 @@ export function LogoLoader({ size = 64, label = 'Loading…', page = false }) {
 }
 
 /** Whole-page loading: route code, auth checks and pages waiting on their main record. */
-export const PageLoader = ({ size = 112, label }) => <LogoLoader size={size} label={label} page />;
+export const PageLoader = ({ size = 120, label }) => <LogoLoader size={size} label={label} page />;
 
 /** Loading inside a section of a page. */
 export function LoadingState({ size = 64, label }) {
