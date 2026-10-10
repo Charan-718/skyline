@@ -1,40 +1,39 @@
-# SOMS backend
+# SOMS Backend (Group 1 — Engagement)
 
-Node 20 + Express (ESM), PostgreSQL 16, Knex. Layout and contracts: `docs/LLD.md`.
-Group 2 scope and decisions: `docs/GROUP_2_SCOPE_MAP.md`, `docs/GROUP_2_OPEN_QUESTIONS.md`.
+Node.js 20+ Express modular monolith for auth, clubs, memberships, pricing, events, announcements, event reporting, and membership jobs. Finance payments/ledger and notifications include **G2-STUB** implementations so Group 1 integration tests run without Group 2.
 
-## Fresh start
+## Setup
 
-```sh
-cp .env.example .env          # optional; docker-compose.yml has dev defaults
-docker compose up --build -d  # db + backend; entrypoint runs migrations, then the server
-curl localhost:4000/api/v1/health   # {"status":"ok","db":"ok"}
+```bash
+cp ../.env.example ../.env   # or export DATABASE_URL
+cd backend
+npm install
+npm run migrate
+npm run seed                 # no-op; college roster is fixtures/students.mock.json (see verification/fixtures/README.md)
+npm start                    # http://localhost:4000/api/v1/health
 ```
 
-`GROUP1_SCHEMA` (TODO(group1): delete when Group 1 merges):
+PostgreSQL 16 required. Tests use `TEST_DATABASE_URL` or `DATABASE_URL` (database `soms_test` recommended).
 
-| Value | Effect |
-|---|---|
-| `fixture` (Compose default) | applies `tests/fixtures/group1_schema.sql` in place of Group 1 migrations 002/003/006/007 |
-| `external` | skips Group 1 migrations; their tables must already exist |
-| `migrations` (production default) | runs every migration file; fails at 004 until Group 1's migrations exist |
-
-## Tests
-
-Run inside the backend container (Node 20, real PostgreSQL `soms_test`):
-
-```sh
-docker compose exec backend npm test              # full suite
-docker compose exec backend npm run test:unit
-docker compose exec backend npm run test:concurrency
-docker compose exec backend npm run lint          # ESLint + dependency-cruiser + no-float grep test
+```bash
+npm test
 ```
 
-## Migration rollback check
+## API testing (Postman / cURL)
 
-```sh
-docker compose exec backend npx knex migrate:rollback --all
-docker compose exec backend npx knex migrate:latest
+Import **`postman/SOMS-Group1.postman_collection.json`** and **`postman/SOMS-Local.postman_environment.json`**. Step-by-step cURLs: **`postman/CURL-WALKTHROUGH.md`**. Before publishing events, run **`postman/setup-organizer.sql`** (organizer routes not wired yet).
+
+## CLI (ASM-01)
+
+```bash
+npm run cli -- create-club --slug skyline --name "Skyline Association" --prefix SKY
+npm run cli -- assign-club-head --club-id <uuid> --email head@skyline.ac.in
 ```
 
-`tests/integration/migrations.test.js` repeats latest → rollback → latest on a scratch database.
+## Module layout
+
+See `docs/LLD.md` §1.1. Composition root: `src/container.js`. Payment handlers registered for `MEMBERSHIP_JOIN`, `MEMBERSHIP_RENEWAL`, `EVENT_TICKET`.
+
+## Migrations owned here
+
+002, 003, 006, 007; plus minimal 009/011/012 stubs coordinated with Group 2.

@@ -1,5 +1,58 @@
+# Dependencies (install with npm install / npm ci — never commit)
 node_modules/
+
+# Environment and secrets (use .env.example as the template)
 .env
-backend/uploads/
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test / coverage
 coverage/
+.nyc_output/
+vitest.config.ts.timestamp-*
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Frontend (Vite) — when added
+frontend/dist/
+frontend/.vite/
+
+# Uploads / local file storage (ADR-016, Docker volume)
+uploads/
+backend/uploads/
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Editors / IDE (keep shared settings if you add them later via .vscode/extensions.json)
+.idea/
+*.swp
+*.swo
+*~
+
+# Docker local overrides (optional per-developer)
+docker-compose.override.yml
+
+# Debug / temp
+.tmp/
+temp/
+*.pid
+
+# Playwright (when E2E is added)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/

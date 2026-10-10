@@ -1,67 +1,61 @@
 import express from 'express';
+import cors from 'cors';
 import helmet from 'helmet';
-import { requestId } from './shared/middleware/requestId.js';
-import { requestLogger } from './shared/middleware/requestLogger.js';
-import { cors } from './shared/middleware/cors.js';
-import { csrfHeader } from './shared/middleware/csrfHeader.js';
-import { createSession } from './shared/middleware/session.js';
-import { errorHandler, notFoundHandler } from './shared/middleware/errorHandler.js';
+import pinoHttp from 'pino-http';
+import { config } from './config/index.js';
+import { logger } from './shared/logger.js';
+import { requestIdMiddleware } from './shared/middleware/requestId.js';
+import { createSessionMiddleware } from './shared/middleware/session.js';
+import { errorHandler } from './shared/middleware/errorHandler.js';
+import { globalRateLimit } from './shared/middleware/rateLimits.js';
+import { db } from './db/knex.js';
 
-// Express app factory (LLD §1.1), used by server.js and tests. Base path /api/v1 (LLD §4).
-// `beforeRoutes(router, container)` lets the test harness mount test-only routes; production
-// code never passes it.
-
-function health(db, logger) {
-  return async (req, res) => {
-    try {
-      await db.raw('select 1');
-      res.json({ status: 'ok', db: 'ok' });
-    } catch (err) {
-      logger.warn({ requestId: req.id, err }, 'health check failed');
-      res.status(503).json({ status: 'error', db: 'down' });
-    }
-  };
-}
-
-export function createApp(container, { beforeRoutes } = {}) {
-  const { config, logger, db } = container;
+export function createApp(container) {
   const app = express();
-  app.disable('x-powered-by');
-  app.set('trust proxy', config.isProduction ? 1 : false);
 
-  app.use(requestId());
-  app.use(requestLogger(logger));
   app.use(helmet());
-  app.use(cors(config.corsOrigin));
-  app.get('/api/v1/health', health(db, logger));
+  app.use(
+    cors({
+      origin: config.CORS_ORIGIN,
+      credentials: true,
+    }),
+  );
+  app.use(express.json({ limit: '1mb' }));
+  app.use(requestIdMiddleware);
+  app.use(pinoHttp({ logger }));
+  app.use(globalRateLimit);
+  app.use(createSessionMiddleware());
 
-  app.use(container.rateLimits.global);
-  app.use(express.json({ limit: '100kb' }));
-  app.use(createSession({ pool: container.sessionPool, secret: config.sessionSecret, isProduction: config.isProduction }));
-  app.use(csrfHeader());
+  app.get('/api/v1/health', async (_req, res) => {
+    try {
+      await db.raw('SELECT 1');
+      res.json({ data: { status: 'ok', db: 'ok' } });
+    } catch {
+      res.status(503).json({ data: { status: 'degraded', db: 'error' } });
+    }
+  });
+
+  if (config.devToolsEnabled) {
+    app.get('/api/v1/dev/college-roster', async (_req, res) => {
+      const { listMockCollegeStudents } = await import(
+        './modules/auth/verification/MockCollegeVerificationAdapter.js'
+      );
+      res.json({
+        data: {
+          source: 'students.mock.json',
+          note:
+            'Universal register: non-college emails become outsiders. College-domain emails are checked against this roster (email + fullName); optional studentIdentifier. POST /me/college-verification to retry.',
+          students: listMockCollegeStudents(),
+        },
+      });
+    });
+  }
 
   const api = express.Router();
-  beforeRoutes?.(api, container);
-  const routeDeps = {
-    requireAuth: container.requireAuth,
-    optionalAuth: container.optionalAuth,
-    idempotency: container.idempotency,
-    requireClubRole: container.requireClubRole,
-  };
-  api.use(container.finance.routes(routeDeps));
-  api.use(container.fundraisers.routes(routeDeps));
-  api.use(container.reporting.routes(routeDeps));
-  api.use(container.merchandise.routes(routeDeps));
-  api.use(
-    container.dev.routes([
-      container.finance.devRoutes(routeDeps),
-      container.notifications.devRoutes(routeDeps),
-      container.jobDevRoutes(routeDeps),
-    ]),
-  );
+  Object.values(container.routes).forEach((router) => api.use(router));
   app.use('/api/v1', api);
 
-  app.use(notFoundHandler());
-  app.use(errorHandler(logger));
+  app.use(errorHandler);
+
   return app;
 }

@@ -1,43 +1,24 @@
 import { Router } from 'express';
+import { requireAuth } from '../../../shared/middleware/requireAuth.js';
+import { csrfHeader } from '../../../shared/middleware/csrfHeader.js';
 import { validate } from '../../../shared/middleware/validate.js';
-import { clubIdParams, clubPaymentsQuery, myPaymentsQuery, paymentIdParams, simulateBody } from './schemas.js';
+import { requireIdempotencyKey, idempotencyMiddleware } from '../../../shared/middleware/idempotency.js';
+import { simulatePaymentBody, paymentIdParam } from './schemas.js';
 
-// LLD §4.4. Order per route: requireAuth → idempotency [IDEM] → validate → authorize → controller.
-
-export function createPaymentRoutes({ controller, requireAuth, idempotency, requireClubRole }) {
+export function createPaymentRoutes({ paymentController }) {
   const router = Router();
 
-  router.get('/payments/:paymentId', requireAuth, validate({ params: paymentIdParams }), controller.get);
+  router.get('/payments/:paymentId', requireAuth, validate({ params: paymentIdParam }), paymentController.getPayment);
 
   router.post(
     '/payments/:paymentId/simulate',
     requireAuth,
-    idempotency(),
-    validate({ params: paymentIdParams, body: simulateBody }),
-    controller.simulate,
+    csrfHeader,
+    requireIdempotencyKey,
+    idempotencyMiddleware(),
+    validate({ params: paymentIdParam, body: simulatePaymentBody }),
+    paymentController.simulate,
   );
 
-  router.get('/me/payments', requireAuth, validate({ query: myPaymentsQuery }), controller.listMine);
-
-  router.get(
-    '/clubs/:clubId/payments',
-    requireAuth,
-    validate({ params: clubIdParams, query: clubPaymentsQuery }),
-    requireClubRole(['TREASURER', 'CLUB_HEAD']),
-    controller.listForClub,
-  );
-
-  return router;
-}
-
-/** Dev tools only (LLD §4.11): resolves any payment, including AutoPay PENDING ones. */
-export function createDevPaymentRoutes({ controller, requireAuth }) {
-  const router = Router();
-  router.post(
-    '/dev/payments/:paymentId/simulate',
-    requireAuth,
-    validate({ params: paymentIdParams, body: simulateBody }),
-    controller.devSimulate,
-  );
   return router;
 }

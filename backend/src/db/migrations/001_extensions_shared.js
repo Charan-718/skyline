@@ -1,34 +1,30 @@
-// LLD §3.5 #1 — pgcrypto, set_updated_at(), forbid_update_delete().
-
+/**
+ * @param {import('knex').Knex} knex
+ */
 export async function up(knex) {
-  await knex.raw(`
-    CREATE EXTENSION IF NOT EXISTS pgcrypto;
+  await knex.raw('CREATE EXTENSION IF NOT EXISTS pgcrypto');
 
-    CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger
-    LANGUAGE plpgsql AS $fn$
+  await knex.raw(`
+    CREATE OR REPLACE FUNCTION set_updated_at()
+    RETURNS TRIGGER AS $$
     BEGIN
-      NEW.updated_at := now();
+      NEW.updated_at = now();
       RETURN NEW;
     END;
-    $fn$;
+    $$ LANGUAGE plpgsql;
+  `);
 
-    -- Append-only tables (audit_logs, financial_transactions) attach this as
-    -- BEFORE UPDATE OR DELETE ... FOR EACH ROW.
-    CREATE OR REPLACE FUNCTION forbid_update_delete() RETURNS trigger
-    LANGUAGE plpgsql AS $fn$
+  await knex.raw(`
+    CREATE OR REPLACE FUNCTION forbid_update_delete()
+    RETURNS TRIGGER AS $$
     BEGIN
-      RAISE EXCEPTION '% on % is not allowed: table is append-only', TG_OP, TG_TABLE_NAME
-        USING ERRCODE = 'restrict_violation';
+      RAISE EXCEPTION 'updates and deletes are forbidden on %', TG_TABLE_NAME;
     END;
-    $fn$;
+    $$ LANGUAGE plpgsql;
   `);
 }
 
 export async function down(knex) {
-  await knex.raw(`
-    DROP FUNCTION IF EXISTS forbid_update_delete();
-    DROP FUNCTION IF EXISTS set_updated_at();
-  `);
-  // pgcrypto is left installed: other databases objects or tools may depend on it, and
-  // CREATE EXTENSION IF NOT EXISTS makes re-running up safe.
+  await knex.raw('DROP FUNCTION IF EXISTS forbid_update_delete()');
+  await knex.raw('DROP FUNCTION IF EXISTS set_updated_at()');
 }

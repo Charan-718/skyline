@@ -1,56 +1,56 @@
-// LLD §3.5 #4 — audit_logs (append-only), idempotency_keys, job_runs. FKs to users/clubs (Group 1).
-
+/**
+ * @param {import('knex').Knex} knex
+ */
 export async function up(knex) {
+  await knex.schema.createTable('audit_logs', (t) => {
+    t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+    t.uuid('actor_user_id').nullable().references('id').inTable('users');
+    t.uuid('club_id').nullable().references('id').inTable('clubs');
+    t.text('action').notNullable();
+    t.text('entity_type').notNullable();
+    t.uuid('entity_id').nullable();
+    t.jsonb('metadata').notNullable().defaultTo('{}');
+    t.text('request_id').nullable();
+    t.timestamp('created_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
+  });
   await knex.raw(`
-    CREATE TABLE audit_logs (
-      id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      actor_user_id uuid NULL REFERENCES users (id) ON DELETE RESTRICT,
-      club_id       uuid NULL REFERENCES clubs (id) ON DELETE RESTRICT,
-      action        text NOT NULL,
-      entity_type   text NOT NULL,
-      entity_id     uuid NULL,
-      metadata      jsonb NOT NULL DEFAULT '{}',
-      request_id    text NULL,
-      created_at    timestamptz NOT NULL DEFAULT now()
-    );
-    CREATE INDEX audit_logs_club_created_idx ON audit_logs (club_id, created_at DESC);
-    CREATE INDEX audit_logs_entity_idx ON audit_logs (entity_type, entity_id);
-    CREATE TRIGGER audit_logs_append_only BEFORE UPDATE OR DELETE ON audit_logs
-      FOR EACH ROW EXECUTE FUNCTION forbid_update_delete();
-
-    CREATE TABLE idempotency_keys (
-      user_id       uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
-      key           uuid NOT NULL,
-      method        text NOT NULL,
-      path          text NOT NULL,
-      request_hash  text NOT NULL,
-      status_code   int NULL,
-      response_body jsonb NULL,
-      locked_at     timestamptz NULL,
-      created_at    timestamptz NOT NULL DEFAULT now(),
-      expires_at    timestamptz NOT NULL,
-      PRIMARY KEY (user_id, key)
-    );
-    CREATE INDEX idempotency_keys_expires_idx ON idempotency_keys (expires_at);
-
-    CREATE TABLE job_runs (
-      id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      job_name    text NOT NULL,
-      run_key     text NOT NULL,
-      status      text NOT NULL CHECK (status IN ('RUNNING', 'SUCCEEDED', 'FAILED')),
-      started_at  timestamptz NOT NULL DEFAULT now(),
-      finished_at timestamptz NULL,
-      summary     jsonb NULL,
-      error       text NULL,
-      UNIQUE (job_name, run_key)
-    );
+    CREATE INDEX audit_logs_club_created ON audit_logs (club_id, created_at DESC);
+    CREATE INDEX audit_logs_entity ON audit_logs (entity_type, entity_id);
+    CREATE TRIGGER audit_logs_no_mutate BEFORE UPDATE OR DELETE ON audit_logs
+    FOR EACH ROW EXECUTE FUNCTION forbid_update_delete();
   `);
+
+  await knex.schema.createTable('idempotency_keys', (t) => {
+    t.uuid('user_id').notNullable().references('id').inTable('users');
+    t.uuid('key').notNullable();
+    t.text('method').notNullable();
+    t.text('path').notNullable();
+    t.text('request_hash').notNullable();
+    t.integer('status_code').nullable();
+    t.jsonb('response_body').nullable();
+    t.timestamp('locked_at', { useTz: true }).nullable();
+    t.timestamp('created_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
+    t.timestamp('expires_at', { useTz: true }).notNullable();
+    t.primary(['user_id', 'key']);
+  });
+  await knex.raw('CREATE INDEX idempotency_keys_expires ON idempotency_keys (expires_at)');
+
+  await knex.schema.createTable('job_runs', (t) => {
+    t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+    t.text('job_name').notNullable();
+    t.text('run_key').notNullable();
+    t.text('status').notNullable();
+    t.timestamp('started_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
+    t.timestamp('finished_at', { useTz: true }).nullable();
+    t.jsonb('summary').nullable();
+    t.text('error').nullable();
+    t.check("status IN ('RUNNING','SUCCEEDED','FAILED')", [], 'job_runs_status');
+    t.unique(['job_name', 'run_key']);
+  });
 }
 
 export async function down(knex) {
-  await knex.raw(`
-    DROP TABLE job_runs;
-    DROP TABLE idempotency_keys;
-    DROP TABLE audit_logs;
-  `);
+  await knex.schema.dropTableIfExists('job_runs');
+  await knex.schema.dropTableIfExists('idempotency_keys');
+  await knex.schema.dropTableIfExists('audit_logs');
 }

@@ -1,61 +1,61 @@
-import { appError } from '../../../shared/errors.js';
-import { PAYMENT_PURPOSE_CATEGORY, samePosting, validateLedgerEntry } from '../domain/ledgerRules.js';
-import * as repository from './repository.js';
+import { AppError } from '../../../shared/errors.js';
+import { now } from '../../../shared/clock.js';
+import { logger } from '../../../shared/logger.js';
 
-// ledger.post(trx, entry) — the only writer of financial_transactions (LLD §5.12, ADR-015).
-// Posting the same source twice is a no-op when it records the same money; anything else is
-// LEDGER_CONFLICT (500 + error log), which rolls the caller's transaction back.
+export function createLedgerService({ ledgerRepository }) {
+  return {
+    /**
+     * Append-only ledger post with idempotent source key.
+     * @param {import('knex').Knex.Transaction} trx
+     */
+    async post(trx, entry) {
+      if (!entry.amountPaise || entry.amountPaise <= 0) {
+        throw new AppError('VALIDATION_FAILED', 400, 'Invalid ledger amount');
+      }
 
-export function createLedgerService({ db, logger }) {
-  async function post(trx, entry) {
-    if (!trx) throw new TypeError('ledger.post requires a transaction');
-    const problems = validateLedgerEntry(entry);
-    if (problems.length) throw new TypeError(`Invalid ledger entry: ${problems.join('; ')}`);
+      const row = {
+        club_id: entry.clubId,
+        direction: entry.direction,
+        category: entry.category,
+        amount_paise: entry.amountPaise,
+        source_type: entry.sourceType,
+        source_id: entry.sourceId,
+        payment_id: entry.paymentId ?? (entry.sourceType === 'PAYMENT' ? entry.sourceId : null),
+        expense_id: entry.expenseId ?? null,
+        event_id: entry.eventId ?? null,
+        fundraiser_id: entry.fundraiserId ?? null,
+        membership_id: entry.membershipId ?? null,
+        order_id: entry.orderId ?? null,
+        payer_user_id: entry.payerUserId ?? null,
+        recorded_by: entry.recordedBy ?? null,
+        approved_by: entry.approvedBy ?? null,
+        description: entry.description,
+        reference: entry.reference ?? null,
+        evidence_file_id: entry.evidenceFileId ?? null,
+        occurred_at: entry.occurredAt ?? now(),
+      };
 
-    const inserted = await repository.insertIfAbsent(trx, entry);
-    if (inserted) return { transaction: inserted, created: true };
+      const inserted = await trx('financial_transactions')
+        .insert(row)
+        .onConflict(['source_type', 'source_id'])
+        .ignore()
+        .returning('*');
 
-    const existing = await repository.findBySource(trx, entry.sourceType, entry.sourceId);
-    if (existing && samePosting(existing, entry)) return { transaction: existing, created: false };
-    logger.error(
-      { sourceType: entry.sourceType, sourceId: entry.sourceId, existingId: existing?.id ?? null },
-      'ledger: source already posted with different money',
-    );
-    throw appError('LEDGER_CONFLICT');
-  }
+      if (inserted.length > 0) {
+        return inserted[0];
+      }
 
-  /**
-   * Income row for a SUCCEEDED payment, for payment purpose handlers (LLD §5.2, §5.7, §5.9).
-   * Category follows the purpose; occurredAt is the settlement time (OQ-16).
-   */
-  async function postPaymentIncome(trx, payment, { description, eventId, membershipId, orderId, fundraiserId } = {}) {
-    if (payment.status !== 'SUCCEEDED') throw new TypeError('only SUCCEEDED payments are posted to the ledger');
-    return post(trx, {
-      clubId: payment.club_id,
-      direction: 'IN',
-      category: PAYMENT_PURPOSE_CATEGORY[payment.purpose],
-      amountPaise: payment.amount_paise,
-      sourceType: 'PAYMENT',
-      sourceId: payment.id,
-      paymentId: payment.id,
-      eventId,
-      membershipId,
-      orderId,
-      fundraiserId,
-      payerUserId: payment.user_id,
-      recordedBy: null,
-      description: description ?? `${payment.purpose} ${payment.reference}`,
-      reference: payment.reference,
-      occurredAt: new Date(payment.settled_at),
-    });
-  }
+      const existing = await ledgerRepository.findBySource(entry.sourceType, entry.sourceId, trx);
+      if (
+        existing &&
+        Number(existing.amountPaise) === Number(entry.amountPaise) &&
+        existing.category === entry.category
+      ) {
+        return existing;
+      }
 
-  /** Map fundraiserId -> { income, expensesPaid } from ledger sums (zeros when no rows). */
-  async function fundraiserMoney(fundraiserIds) {
-    const rows = await repository.sumsByFundraiser(db, fundraiserIds);
-    const byId = new Map(rows.map((r) => [r.fundraiser_id, { income: r.income, expensesPaid: r.expenses_paid }]));
-    return new Map(fundraiserIds.map((id) => [id, byId.get(id) ?? { income: 0, expensesPaid: 0 }]));
-  }
-
-  return Object.freeze({ post, postPaymentIncome, fundraiserMoney });
+      logger.error({ entry, existing }, 'Ledger conflict');
+      throw new AppError('LEDGER_CONFLICT', 500, 'Ledger entry conflict');
+    },
+  };
 }

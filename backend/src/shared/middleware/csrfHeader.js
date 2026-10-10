@@ -1,11 +1,14 @@
-import { appError } from '../errors.js';
+import { AppError } from '../errors.js';
 
-// ADR-004: state-changing requests must carry X-Requested-With: soms (with SameSite=Lax cookies).
-const SAFE = new Set(['GET', 'HEAD', 'OPTIONS']);
+const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
-export function csrfHeader() {
-  return (req, res, next) => {
-    if (SAFE.has(req.method) || req.get('X-Requested-With') === 'soms') return next();
-    next(appError('FORBIDDEN', { reason: 'CSRF_HEADER_MISSING' }, 'Missing X-Requested-With header.'));
-  };
+export function csrfHeader(req, _res, next) {
+  if (!MUTATING.has(req.method)) return next();
+  if (req.path.startsWith('/api/v1/auth/login') || req.path.startsWith('/api/v1/auth/register')) {
+    return next();
+  }
+  if (req.headers['x-requested-with'] !== 'soms') {
+    return next(new AppError('FORBIDDEN', 403, 'Missing CSRF header'));
+  }
+  return next();
 }

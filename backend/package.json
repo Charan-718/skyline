@@ -3,44 +3,43 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": {
-    "node": ">=20 <21"
-  },
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "migrate:latest": "knex migrate:latest",
-    "migrate:rollback": "knex migrate:rollback --all",
-    "migrate:status": "knex migrate:status",
-    "lint": "npm run lint:eslint && npm run lint:deps && npm run lint:money",
-    "lint:deps": "depcruise src --config .dependency-cruiser.cjs",
+    "migrate": "knex migrate:latest",
+    "migrate:rollback": "knex migrate:rollback",
+    "seed": "knex seed:run",
     "test": "vitest run",
-    "test:unit": "vitest run tests/unit",
-    "test:concurrency": "vitest run tests/concurrency",
-    "lint:eslint": "eslint .",
-    "lint:money": "SKIP_DB_SETUP=1 vitest run tests/unit/noFloatMoney.test.js",
-    "test:contract:group1": "GROUP1_CONTRACT_IMPL=src vitest run tests/contracts"
+    "test:watch": "vitest",
+    "lint": "eslint src tests",
+    "cli": "node scripts/cli.js"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
-    "connect-pg-simple": "10.0.0",
-    "express": "5.1.0",
-    "express-rate-limit": "7.5.1",
-    "express-session": "1.18.2",
-    "file-type": "21.0.0",
-    "helmet": "8.1.0",
-    "knex": "3.1.0",
-    "multer": "2.0.2",
-    "node-cron": "4.2.1",
-    "pg": "8.16.3",
-    "pino": "9.9.0",
-    "qrcode": "1.5.4",
-    "zod": "3.25.76"
+    "bcrypt": "^6.0.0",
+    "connect-pg-simple": "^10.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.7",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.1",
+    "express-session": "^1.19.0",
+    "helmet": "^8.3.0",
+    "knex": "^3.3.0",
+    "node-cron": "^4.6.0",
+    "pg": "^8.23.1",
+    "pino": "^10.4.0",
+    "pino-http": "^11.0.0",
+    "qrcode": "^1.5.4",
+    "uuid": "^14.0.3",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@eslint/js": "9.39.1",
-    "dependency-cruiser": "16.10.4",
-    "eslint": "9.39.1",
-    "supertest": "7.1.4",
-    "vitest": "3.2.4"
+    "@vitest/coverage-v8": "^4.1.11",
+    "dependency-cruiser": "^17.4.3",
+    "eslint": "^10.12.0",
+    "supertest": "^7.3.1",
+    "vitest": "^4.1.11"
   }
 }

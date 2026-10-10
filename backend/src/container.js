@@ -1,147 +1,212 @@
-import pg from 'pg';
-import { createWithTransaction } from './db/transaction.js';
-import { audit } from './shared/audit.js';
-import { createIdempotency } from './shared/middleware/idempotency.js';
-import { createRateLimits } from './shared/middleware/rateLimits.js';
-import { createRequireAuth } from './shared/middleware/requireAuth.js';
-import { createAuthorize } from './shared/middleware/authorize.js';
-import * as authModule from './modules/auth/index.js';
-import * as clubsModule from './modules/clubs/index.js';
-import * as eventsModule from './modules/events/index.js';
-import * as pricingModule from './modules/pricing/index.js';
-import * as membershipsModule from './modules/memberships/index.js';
-import { createFinanceModule } from './modules/finance/index.js';
-import { createDevModule } from './modules/dev/index.js';
-import { createFundraisersModule } from './modules/fundraisers/index.js';
-import { createReportingModule } from './modules/reporting/index.js';
-import { createNotificationsModule } from './modules/notifications/index.js';
-import { createMerchandiseModule } from './modules/merchandise/index.js';
-import { createJobRunner } from './jobs/runJob.js';
-import { createJobRegistry } from './jobs/registry.js';
+import { db } from './db/knex.js';
+import { config } from './config/index.js';
+import { now } from './shared/clock.js';
+import { createAuditRepository } from './shared/auditRepository.js';
+import { createPricingPolicy } from './modules/pricing/PricingPolicy.js';
+
+import {
+  createAuthRepository,
+  createAuthService,
+  createAuthController,
+  createAuthRoutes,
+  createMockCollegeVerificationAdapter,
+  createUnconfiguredCollegeVerificationAdapter,
+} from './modules/auth/index.js';
+
+import {
+  createClubRepository,
+  createClubService,
+  createClubController,
+  createClubRoutes,
+  createClubAuthz,
+} from './modules/clubs/index.js';
+
+import {
+  createPaymentRepository,
+  createPaymentService,
+  createPaymentHandlerRegistry,
+  createPaymentController,
+  createPaymentRoutes,
+} from './modules/finance/payments/index.js';
+
+import { createLedgerRepository, createLedgerService } from './modules/finance/ledger/index.js';
+
+import { createNotificationRepository, createNotificationService } from './modules/notifications/index.js';
+
+import {
+  createMembershipRepository,
+  createMembershipService,
+  createPlansService,
+  createMembershipController,
+  createMembershipRoutes,
+  createMembershipPaymentHandler,
+  createMembershipRenewalPaymentHandler,
+} from './modules/memberships/index.js';
+
+import {
+  createEventRepository,
+  createEventService,
+  createEventController,
+  createEventRoutes,
+  createTicketPaymentHandler,
+} from './modules/events/index.js';
+
+import {
+  createAnnouncementRepository,
+  createAnnouncementService,
+  createAnnouncementController,
+  createAnnouncementRoutes,
+} from './modules/announcements/index.js';
+
+import { createEventReportService, createReportingRoutes } from './modules/reporting/index.js';
+
+import { createMembershipExpiryJob } from './jobs/definitions/membershipExpiry.js';
+import { createRenewalRemindersJob } from './jobs/definitions/renewalReminders.js';
+import { createAutopayRenewalsJob } from './jobs/definitions/autopayRenewals.js';
 import { createReservationExpiryJob } from './jobs/definitions/reservationExpiry.js';
-import { createNotificationDispatchJob } from './jobs/definitions/notificationDispatch.js';
-import { createJobDevRoutes } from './jobs/devRoutes.js';
-import { createOptionalAuth } from './shared/middleware/requireAuth.js';
-import { createAccess } from './shared/access.js';
 
-// Composition root (LLD §1.1): wires adapters, services and payment purpose handlers.
-// `group1` lets tests supply working stand-ins for the Group 1 interfaces that are still
-// TODO(group1) stubs (auth.getUser/getUsersByIds, clubs.hasClubRole, events.getEventClub/
-// isClubEventOrganizer). `paymentHandlers` replaces the default
-// handler set (tests register handlers that post to the ledger like the real ones will).
+export function createContainer() {
+  const auditRepository = createAuditRepository(db);
+  const authz = createClubAuthz({ db });
 
-export function createContainer({ config, db, logger, clock, group1 = {}, paymentHandlers, storage, notificationAdapters } = {}) {
-  const auth = group1.auth ?? authModule;
-  const clubs = group1.clubs ?? clubsModule;
-  const events = group1.events ?? eventsModule;
-  const pricing = group1.pricing ?? pricingModule;
-  const memberships = group1.memberships ?? membershipsModule;
-  const withTransaction = createWithTransaction(db);
-  const access = createAccess({ clubs, events });
+  const verificationAdapter =
+    config.COLLEGE_VERIFICATION_MODE === 'mock'
+      ? createMockCollegeVerificationAdapter()
+      : createUnconfiguredCollegeVerificationAdapter();
 
-  // fundraisers is created below; finance looks up a fundraiser's club through it lazily (OQ-25).
-  let fundraisers = null;
-  const finance = createFinanceModule({
-    db,
-    withTransaction,
-    clock,
+  const clubRepository = createClubRepository({ db });
+  const authRepository = createAuthRepository({ db });
+
+  const clubService = createClubService({ clubRepository, authRepository, auditRepository, authz });
+
+  const authService = createAuthService({
+    authRepository,
+    verificationAdapter,
+    clubsModule: clubService,
+    auditRepository,
+  });
+
+  const ledgerRepository = createLedgerRepository({ db });
+  const ledgerService = createLedgerService({ ledgerRepository });
+
+  const notificationRepository = createNotificationRepository({ db });
+  const notificationService = createNotificationService({ notificationRepository });
+
+  const paymentRepository = createPaymentRepository({ db });
+  const handlerRegistry = createPaymentHandlerRegistry();
+
+  const membershipRepository = createMembershipRepository({ db });
+
+  const paymentService = createPaymentService({
+    paymentRepository,
+    handlerRegistry,
+    ledgerService,
     config,
-    logger,
-    access,
-    auth,
-    getEventClub: (eventId) => events.getEventClub(eventId),
-    getFundraiserRef: (fundraiserId) => fundraisers.getFundraiserRef(fundraiserId),
-    storage,
   });
 
-  const notifications = createNotificationsModule({ db, clock, auth, config, logger, adapters: notificationAdapters });
-  const merchandise = createMerchandiseModule({
-    db,
-    withTransaction,
-    clock,
+  const membershipService = createMembershipService({
+    membershipRepository,
+    paymentService,
+    authService,
+    authz,
+    clubRepository,
+  });
+
+  handlerRegistry.register(
+    createMembershipPaymentHandler({
+      membershipRepository,
+      clubRepository,
+      ledgerService,
+      notificationService,
+    }),
+  );
+  handlerRegistry.register(
+    createMembershipRenewalPaymentHandler({
+      membershipRepository,
+      clubRepository,
+      ledgerService,
+      notificationService,
+    }),
+  );
+
+  const eventRepository = createEventRepository({ db });
+
+  handlerRegistry.register(
+    createTicketPaymentHandler({
+      eventRepository,
+      ledgerService,
+      notificationService,
+      authService,
+    }),
+  );
+
+  const pricingPolicy = createPricingPolicy(now, config.PRICING_COMBINATION_MODE);
+
+  const eventService = createEventService({
+    eventRepository,
+    membershipService,
+    pricingPolicy,
+    paymentService,
+    authz,
     config,
-    access,
-    auth,
-    clubs,
-    pricing,
-    memberships,
-    payments: finance.payments,
-    ledger: finance.ledger,
-    notifications,
   });
 
-  // Payment purpose handlers (LLD §2.10). MERCH_ORDER is Group 2's own handler and is always
-  // registered. MEMBERSHIP_* are Group 1 stubs that record calls (TODO(group1)); EVENT_TICKET is
-  // registered by Group 1 (T-43). `paymentHandlers` replaces the Group 1 set (tests).
-  const membershipHandlers = membershipsModule.createMembershipPaymentHandlers();
-  for (const handler of paymentHandlers ?? membershipHandlers.handlers) finance.payments.registerHandler(handler);
-  finance.payments.registerHandler(merchandise.paymentHandler);
+  const plansService = createPlansService({ membershipRepository, authz, authService });
 
-  // Jobs (LLD §7). Group 1 adds its daily jobs here.
-  const runJob = createJobRunner({ db, clock, logger });
-  const jobs = createJobRegistry({
-    runJob,
-    clock,
-    timeZone: config.timezone,
-    definitions: {
-      'reservation-expiry': {
-        cron: '* * * * *',
-        daily: false,
-        run: createReservationExpiryJob({ payments: finance.payments, withTransaction, config, logger }),
-      },
-      'notification-dispatch': { cron: '* * * * *', daily: false, run: createNotificationDispatchJob({ notifications }) },
-    },
+  const announcementRepository = createAnnouncementRepository({ db });
+  const announcementService = createAnnouncementService({
+    announcementRepository,
+    membershipRepository,
+    eventRepository,
+    authRepository,
+    notificationService,
+    authz,
   });
 
-  fundraisers = createFundraisersModule({
-    db,
-    clock,
-    access,
-    clubs,
-    auth,
-    fundraiserMoney: finance.ledger.fundraiserMoney,
-    timeZone: config.timezone,
-    tolerancePct: config.fundraiserAtRiskTolerancePct,
-  });
+  const eventReportService = createEventReportService({ db });
 
-  const reporting = createReportingModule({
-    db,
-    financeSummary: (clubId, period) => finance.summary.summary(clubId, period),
-    timeZone: config.timezone,
-  });
+  const authController = createAuthController({ authService });
+  const clubController = createClubController({ clubService });
+  const paymentController = createPaymentController({ paymentService });
+  const membershipController = createMembershipController({ membershipService, plansService });
+  const eventController = createEventController({ eventService });
+  const announcementController = createAnnouncementController({ announcementService });
 
-  const sessionPool = new pg.Pool({ connectionString: config.databaseUrl, max: 5 });
+  const routes = {
+    auth: createAuthRoutes({ authController }),
+    clubs: createClubRoutes({ clubController, authz }),
+    payments: createPaymentRoutes({ paymentController }),
+    memberships: createMembershipRoutes({ membershipController, authz }),
+    events: createEventRoutes({ eventController, authz }),
+    announcements: createAnnouncementRoutes({ announcementController, authz }),
+    reporting: createReportingRoutes({ eventReportService, authz, eventRepository }),
+  };
+
+  const jobs = {
+    membershipExpiry: createMembershipExpiryJob({ db }),
+    renewalReminders: createRenewalRemindersJob({ db, notificationService }),
+    autopayRenewals: createAutopayRenewalsJob({
+      db,
+      membershipRepository,
+      paymentService,
+      authService,
+      notificationService,
+    }),
+    reservationExpiry: createReservationExpiryJob({ db, paymentService }),
+  };
 
   return {
-    config,
     db,
-    logger,
-    clock,
-    withTransaction,
-    audit,
-    auth,
-    clubs,
-    events,
-    access,
-    finance,
-    fundraisers,
-    reporting,
-    notifications,
-    merchandise,
+    config,
+    routes,
     jobs,
-    runJob,
-    jobDevRoutes: (deps) => createJobDevRoutes({ registry: jobs, ...deps }),
-    dev: createDevModule({ config }),
-    membershipHandlerCalls: membershipHandlers.calls,
-    sessionPool,
-    rateLimits: createRateLimits({ enabled: config.rateLimitEnabled }),
-    requireAuth: createRequireAuth({ auth }),
-    optionalAuth: createOptionalAuth({ auth }),
-    requireClubRole: createAuthorize({ access }),
-    idempotency: createIdempotency({ db, clock, logger }),
-    async close() {
-      await sessionPool.end();
-      await db.destroy();
+    services: {
+      authService,
+      clubService,
+      membershipService,
+      eventService,
+      paymentService,
+      announcementService,
     },
   };
 }

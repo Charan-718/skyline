@@ -1,20 +1,30 @@
-import { randomBytes, randomInt } from 'node:crypto';
+import crypto from 'node:crypto';
 
-// Crockford base32 without I, L, O, U.
 const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
-/** 128-bit (default) random token, base64url — QR tokens. */
 export function randomToken(bytes = 16) {
-  return randomBytes(bytes).toString('base64url');
+  return crypto.randomBytes(bytes).toString('base64url');
 }
 
-export function crockfordCode(length) {
-  let out = '';
-  for (let i = 0; i < length; i += 1) out += CROCKFORD[randomInt(CROCKFORD.length)];
-  return out;
+export function randomReference(prefix = 'SIM') {
+  const chars = CROCKFORD;
+  let code = '';
+  const buf = crypto.randomBytes(12);
+  for (let i = 0; i < 12; i++) {
+    code += chars[buf[i] % chars.length];
+  }
+  return `${prefix}-${code}`;
 }
 
-export const ticketCode = () => crockfordCode(10);
-export const pickupCode = () => crockfordCode(8);
-export const paymentReference = () => `SIM-${crockfordCode(12)}`;
-export const CROCKFORD_ALPHABET = CROCKFORD;
+export function ticketCode(length = 10) {
+  let code = '';
+  const buf = crypto.randomBytes(length);
+  for (let i = 0; i < length; i++) {
+    code += CROCKFORD[buf[i] % CROCKFORD.length];
+  }
+  return code;
+}
+
+export function pickupCode(length = 8) {
+  return ticketCode(length);
+}

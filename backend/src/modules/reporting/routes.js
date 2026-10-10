@@ -1,24 +1,43 @@
 import { Router } from 'express';
-import { z } from 'zod';
+import { requireAuth } from '../../shared/middleware/requireAuth.js';
 import { validate } from '../../shared/middleware/validate.js';
-import { isoDateSchema } from '../../shared/dates.js';
+import { authorize } from '../../shared/middleware/authorize.js';
+import { z } from 'zod';
 
-// LLD §4.10 reports. Finance report: CH, TR.
+const eventIdParam = z.object({ eventId: z.string().uuid() });
 
-const clubIdParams = z.object({ clubId: z.string().uuid() });
-const periodQuery = z
-  .object({ from: isoDateSchema.optional(), to: isoDateSchema.optional() })
-  .strict()
-  .refine((q) => !q.from || !q.to || q.from <= q.to, { message: 'from must not be after to', path: ['from'] });
+export function createReportingRoutes({ eventReportService, authz, eventRepository }) {
+  const router = Router();
 
-export function createReportingRoutes({ controller, requireAuth, requireClubRole }) {
-  const r = Router();
-  r.get(
-    '/clubs/:clubId/reports/finance',
+  router.get(
+    '/events/:eventId/report',
     requireAuth,
-    validate({ params: clubIdParams, query: periodQuery }),
-    requireClubRole(['CLUB_HEAD', 'TREASURER']),
-    controller.financeReport,
+    validate({ params: eventIdParam }),
+    authorize(authz, {
+      role: 'TR',
+      resolveScope: async (req) => {
+        const event = await eventRepository.findById(req.params.eventId);
+        return { clubId: event?.clubId, eventId: req.params.eventId };
+      },
+    }),
+    async (req, res, next) => {
+      try {
+        const event = await eventRepository.findById(req.params.eventId);
+        const allowed =
+          (await authz.isTreasurer(req.userId, event.clubId)) ||
+          (await authz.isClubHead(req.userId, event.clubId)) ||
+          (await authz.isOrganizer(req.userId, req.params.eventId));
+        if (!allowed) {
+          const { AppError } = await import('../../shared/errors.js');
+          return next(new AppError('FORBIDDEN', 403, 'Forbidden'));
+        }
+        const report = await eventReportService.getEventReport(req.params.eventId);
+        res.json({ data: report });
+      } catch (e) {
+        next(e);
+      }
+    },
   );
-  return r;
+
+  return router;
 }

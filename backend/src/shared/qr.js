@@ -1,26 +1,32 @@
 import QRCode from 'qrcode';
-import { appError } from './errors.js';
 
-// QR payloads are opaque: SOMS1:<kind>:<token>, kind M = membership card, T = ticket (LLD §2.4, §5.8).
-const PAYLOAD = /^SOMS1:([MT]):([A-Za-z0-9_-]{16,64})$/;
+const TICKET_PREFIX = 'SOMS1:T:';
+const MEMBERSHIP_PREFIX = 'SOMS1:M:';
 
-export const QR_KIND = Object.freeze({ MEMBERSHIP: 'M', TICKET: 'T' });
-
-export function buildPayload(kind, token) {
-  if (!Object.values(QR_KIND).includes(kind)) throw new TypeError('unknown QR kind');
-  const payload = `SOMS1:${kind}:${token}`;
-  if (!PAYLOAD.test(payload)) throw new TypeError('invalid QR token');
-  return payload;
+export function buildTicketQrPayload(qrToken) {
+  return `${TICKET_PREFIX}${qrToken}`;
 }
 
-/** Returns {kind, token}, or null for anything else (callers raise their own INVALID_QR_FORMAT). */
-export function parsePayload(payload) {
-  const match = typeof payload === 'string' ? PAYLOAD.exec(payload.trim()) : null;
-  if (!match) return null;
-  return { kind: match[1], token: match[2] };
+export function buildMembershipQrPayload(qrToken) {
+  return `${MEMBERSHIP_PREFIX}${qrToken}`;
 }
 
-export async function renderSvg(payload) {
-  if (!PAYLOAD.test(payload)) throw appError('VALIDATION_FAILED', { fields: [{ path: 'qrPayload', message: 'invalid' }] });
-  return QRCode.toString(payload, { type: 'svg', errorCorrectionLevel: 'M', margin: 2 });
+export function parseTicketQrPayload(payload) {
+  if (typeof payload !== 'string' || !payload.startsWith(TICKET_PREFIX)) {
+    return null;
+  }
+  const token = payload.slice(TICKET_PREFIX.length);
+  return token.length > 0 ? token : null;
+}
+
+export function parseMembershipQrPayload(payload) {
+  if (typeof payload !== 'string' || !payload.startsWith(MEMBERSHIP_PREFIX)) {
+    return null;
+  }
+  const token = payload.slice(MEMBERSHIP_PREFIX.length);
+  return token.length > 0 ? token : null;
+}
+
+export async function renderQrSvg(payload) {
+  return QRCode.toString(payload, { type: 'svg', margin: 1 });
 }

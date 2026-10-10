@@ -1,35 +1,23 @@
-import { pageResponse } from '../../../shared/pagination.js';
-import { toPaymentDto } from './dto.js';
-
-// HTTP adapters only: read validated input, call one service method, shape JSON.
-
-export function createPaymentController({ payments }) {
-  return Object.freeze({
-    async get(req, res) {
-      const payment = await payments.getForOwner(req.actor, req.valid.params.paymentId);
-      res.json({ data: toPaymentDto(payment) });
+export function createPaymentController({ paymentService }) {
+  return {
+    async getPayment(req, res) {
+      const payment = await paymentService.getPayment(req.userId, req.params.paymentId);
+      res.json({ data: payment });
     },
 
     async simulate(req, res) {
-      const { payment, result } = await payments.simulate(req.actor, req.valid.params.paymentId, req.valid.body.outcome);
-      res.json({ data: { ...toPaymentDto(payment), result } });
-    },
-
-    async devSimulate(req, res) {
-      const { payment, result } = await payments.simulate(req.actor, req.valid.params.paymentId, req.valid.body.outcome, {
-        devOverride: true,
+      const { payment, result } = await paymentService.simulate(req.userId, req.params.paymentId, req.body.outcome);
+      res.json({
+        data: {
+          ...payment,
+          result: result ?? undefined,
+        },
       });
-      res.json({ data: { ...toPaymentDto(payment), result } });
     },
 
     async listMine(req, res) {
-      const { rows, total } = await payments.listMine(req.actor, req.valid.query);
-      res.json(pageResponse(rows.map(toPaymentDto), req.valid.query, total));
+      const rows = await paymentService.listMine?.(req.userId, req.query);
+      res.json({ data: rows ?? [] });
     },
-
-    async listForClub(req, res) {
-      const { rows, total } = await payments.listForClub(req.valid.params.clubId, req.valid.query);
-      res.json(pageResponse(rows.map(toPaymentDto), req.valid.query, total));
-    },
-  });
+  };
 }
