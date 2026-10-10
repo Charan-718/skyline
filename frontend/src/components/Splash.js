@@ -75,7 +75,7 @@ export default function Splash() {
           <span className="splash-rule" aria-hidden />
         </div>
         <div className="splash-meta">
-          <p className="splash-year">2024</p>
+          <p className="splash-year">2001</p>
           <ul className="splash-list splash-list-ruled">
             {['Engineering', 'Education', 'Innovation', 'Research', 'Community'].map((w) => (
               <li key={w}>{w}</li>

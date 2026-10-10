@@ -53,7 +53,7 @@ export function AnnouncementItem({ a, showClub = true, actions }) {
             {a.audience === 'MEMBERS' && <Badge dot={false}>Members only</Badge>}
             {a.status === 'DRAFT' && <StatusBadge status="DRAFT" />}
           </div>
-          <h3 className="wrap-anywhere">{a.title}</h3>
+          <h3 className="wrap-anywhere announcement-title">{a.title}</h3>
         </div>
         {actions}
       </div>
