@@ -18,6 +18,11 @@ export default function Home() {
   return (
     <div className="stack-lg">
       <section className="hero">
+        <div className="hero-collage" aria-hidden>
+          <img className="hero-shot hero-shot-a" src={`${process.env.PUBLIC_URL}/odoo-1.webp`} alt="" />
+          <img className="hero-shot hero-shot-b" src={`${process.env.PUBLIC_URL}/odoo-2.webp`} alt="" />
+          <img className="hero-shot hero-shot-c" src={`${process.env.PUBLIC_URL}/Volunteers_Hackathon.webp`} alt="" />
+        </div>
         <p className="lead-in">{user ? `Welcome back, ${user.fullName.split(' ')[0]}.` : 'For every club on campus,'}</p>
         <h1 tabIndex={-1} data-page-title>
           Clubs, events &amp; money<span className="accent-mark">.</span>

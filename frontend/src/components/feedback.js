@@ -36,7 +36,7 @@ export function Skeleton({ height = 16, width = '100%', style }) {
 }
 
 /**
- * The Campus Flow star as an animated loader revealing its 5 corner lines from center.
+ * The Campus Flow star as a smooth rotating loader with breathing pulse.
  */
 export function LogoLoader({ size = 64, label = 'Loading…', page = false }) {
   return (
@@ -48,10 +48,10 @@ export function LogoLoader({ size = 64, label = 'Loading…', page = false }) {
 }
 
 /** Whole-page loading: route code, auth checks and pages waiting on their main record. */
-export const PageLoader = ({ size = 120, label }) => <LogoLoader size={size} label={label} page />;
+export const PageLoader = ({ size = 150, label }) => <LogoLoader size={size} label={label} page />;
 
 /** Loading inside a section of a page. */
-export function LoadingState({ size = 64, label }) {
+export function LoadingState({ size = 88, label }) {
   return <LogoLoader size={size} label={label} />;
 }
 

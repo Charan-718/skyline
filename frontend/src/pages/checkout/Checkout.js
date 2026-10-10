@@ -30,7 +30,7 @@ function nextStep(p) {
   if (t.kind === 'EVENT_TICKET') return p.status === 'SUCCEEDED' ? { to: `/me/tickets/${t.ticketId}`, label: 'View my ticket' } : { to: `/events/${t.eventId}`, label: 'Back to event' };
   if (t.kind === 'MERCH_ORDER') return { to: `/me/orders/${t.orderId}`, label: p.status === 'SUCCEEDED' ? 'View order & pickup code' : 'View order' };
   if (t.kind === 'MEMBERSHIP') return { to: `/me/memberships/${t.membershipId}`, label: 'View membership' };
-  return { to: '/', label: 'Home' };
+  return { to: '/home', label: 'Home' };
 }
 
 function Result({ payment }) {

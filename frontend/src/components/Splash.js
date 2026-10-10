@@ -1,31 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { APP_NAME } from './Brand';
 
 export const SPLASH_MS = 5000;
 const SEGMENTS = 18;
 
-const hasSeenSplash = () => {
-  if (process.env.NODE_ENV === 'test') return true;
-  try {
-    return sessionStorage.getItem('hasSeenSplash') === 'true';
-  } catch (e) {
-    return false;
-  }
-};
-
-export function useSplash() {
-  const [visible, setVisible] = useState(!hasSeenSplash());
-  
+/* Shown at "/" only: holds for SPLASH_MS, then moves on to /home. */
+export function useSplashRedirect() {
+  const navigate = useNavigate();
   useEffect(() => {
-    if (!visible) return undefined;
-    const timer = setTimeout(() => {
-      try { sessionStorage.setItem('hasSeenSplash', 'true'); } catch (e) {}
-      setVisible(false);
-    }, SPLASH_MS);
+    const ms = process.env.NODE_ENV === 'test' ? 0 : SPLASH_MS;
+    const timer = setTimeout(() => navigate('/home', { replace: true }), ms);
     return () => clearTimeout(timer);
-  }, [visible]);
-  
-  return visible;
+  }, [navigate]);
 }
 
 /*
@@ -66,6 +53,7 @@ const LINES = [
 const pct = (n) => `${n}%`;
 
 export default function Splash() {
+  useSplashRedirect();
   const campus = `${process.env.PUBLIC_URL}/campus.webp`;
   return (
     <div className="splash" style={{ '--splash-ms': `${SPLASH_MS}ms`, '--splash-segments': SEGMENTS }}>
@@ -100,7 +88,7 @@ export default function Splash() {
         <div className="splash-art" aria-hidden>
           <span className="splash-sun" />
           {BLOCKS.map(([tone, left, top, width, height], i) => (
-            <span key={i} className={`splash-block splash-${tone}`} style={{ left: pct(left), top: pct(top), width: pct(width), height: pct(height) }} />
+            <span key={i} className={`splash-block splash-${tone}`} style={{ left: pct(left), top: pct(top), width: pct(width), height: pct(height), '--dur': `${5 + (i % 4)}s`, '--delay': `${-i * 0.7}s`, '--dx': `${(i % 2 ? -1 : 1) * (4 + (i % 3) * 2)}px`, '--dy': `${(i % 3 === 0 ? -1 : 1) * (4 + (i % 4) * 2)}px`, '--rot': `${(i % 2 ? -1 : 1) * (0.3 + (i % 3) * 0.2)}deg` }} />
           ))}
           <img className="splash-reflection" src={campus} alt="" />
           <img className="splash-campus" src={campus} alt="" width="1600" height="641" decoding="async" fetchpriority="high" />

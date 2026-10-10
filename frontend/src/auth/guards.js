@@ -22,7 +22,7 @@ export function RequireClubRole({ roles, children }) {
   if (!allowed) {
     return (
       <div className="card">
-        <EmptyState icon={LockKey} title="You don't have access to this page" action={<Button to="/">Go to home</Button>}>
+        <EmptyState icon={LockKey} title="You don't have access to this page" action={<Button to="/home">Go to home</Button>}>
           This area is for {roles === 'TEAM' ? 'club team members' : roles.map((r) => r.replace('_', ' ').toLowerCase()).join(' or ')} of this club. Ask your club head if you need access.
         </EmptyState>
       </div>

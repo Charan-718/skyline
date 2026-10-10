@@ -28,10 +28,10 @@ export function Logo({ size = 32, title, className }) {
       aria-hidden={title ? undefined : true}
       focusable="false"
     >
-      {ARMS.map(([color, d, cx, cy], i) => (
-        <g key={color} stroke={color} className={`logo-arm logo-arm-${i}`} style={{ '--arm-index': i }}>
-          <path d={d} className="logo-arm-path" pathLength="100" />
-          <circle cx={cx} cy={cy} r="10.0" className="logo-arm-circle" />
+      {ARMS.map(([color, d, cx, cy]) => (
+        <g key={color} stroke={color}>
+          <path d={d} />
+          <circle cx={cx} cy={cy} r="10.0" />
         </g>
       ))}
     </svg>
@@ -41,7 +41,7 @@ export function Logo({ size = 32, title, className }) {
 /** Mark plus wordmark, linking home. */
 export default function Brand({ className = 'brand', style }) {
   return (
-    <Link to="/" className={className} style={style} aria-label={`${APP_NAME} home`}>
+    <Link to="/home" className={className} style={style} aria-label={`${APP_NAME} home`}>
       <Logo size={34} className="brand-mark" />
       <span className="brand-word">{APP_NAME}</span>
     </Link>

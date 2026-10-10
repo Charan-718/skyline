@@ -26,7 +26,7 @@ export default function Register() {
     onError: (e) => form.applyServerErrors(e),
   });
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/home" replace />;
 
   const submit = (e) => {
     e.preventDefault();

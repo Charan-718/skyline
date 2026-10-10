@@ -60,7 +60,7 @@ function buildNav({ user, clubId, clubName, rolesIn, organizerOf, staffOf }) {
     {
       heading: 'Discover',
       items: [
-        { to: '/', icon: House, label: 'Home', end: true },
+        { to: '/home', icon: House, label: 'Home', end: true },
         { to: '/events', icon: CalendarBlank, label: 'Events' },
         { to: '/clubs', icon: Buildings, label: 'Clubs' },
         { to: '/announcements', icon: Megaphone, label: 'Announcements' },
@@ -229,7 +229,7 @@ function UserMenu() {
             onClick={async () => {
               setOpen(false);
               await signOut();
-              navigate('/');
+              navigate('/home');
             }}
           >
             <SignOut size={18} aria-hidden /> Sign out

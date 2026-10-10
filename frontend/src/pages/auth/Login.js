@@ -25,7 +25,7 @@ export default function Login() {
   const { user, setSession } = useAuth();
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const next = params.get('next') || '/';
+  const next = params.get('next') || '/home';
   const [showPw, setShowPw] = useState(false);
   const form = useForm({ email: '', password: '' });
 
