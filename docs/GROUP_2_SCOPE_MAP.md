@@ -264,7 +264,7 @@ None of these exists yet. Step 2 creates `TODO(group1)` stubs only for the ones 
 
 ## 6. Task order (approved)
 
-Step 2 = T-10, T-11, T-12, T-13, T-15, T-24, T-32 (done). Step 3 = T-70, T-71, T-80, T-81, T-82, T-83 (done; `GET /clubs/:clubId/reports/finance` deferred, OQ-52). Later steps = the rest. Step 4 = finance report (`GET /clubs/:clubId/reports/finance`), T-50, T-51, T-60, T-61, T-62, T-63 and the orders half of T-54 (the job itself is purpose-agnostic, OQ-64). Not yet built: T-85 (merchandise/membership reports, TC-RPT-02), T-90, T-92, T-93.
+Step 2 = T-10, T-11, T-12, T-13, T-15, T-24, T-32 (done). Step 3 = T-70, T-71, T-80, T-81, T-82, T-83 (done; `GET /clubs/:clubId/reports/finance` deferred, OQ-52). Later steps = the rest. Step 4 = finance report (`GET /clubs/:clubId/reports/finance`), T-50, T-51, T-60, T-61, T-62, T-63 and the orders half of T-54 (the job itself is purpose-agnostic, OQ-64). Step 5 (after Group 1 merges pricing and auth) = T-85 merchandise and membership reports (TC-RPT-02), T-92 security checks, T-93 Docker reproducibility; plus un-skip TC-MER-05, run the order flow end-to-end on real PricingPolicy, and run `npm run test:contract:group1` (OQ-59) against Group 1's code. T-90 (shared concurrency suite) is not yet scheduled.
 
 T-10 → T-11 → T-12 → T-13 → T-15 → T-24 → **T-32** → T-50 ∥ T-51 → T-60 → T-61 → T-62 → T-63 → T-54 (orders half) → T-70 → T-80 → T-81 → T-82 → T-71 → T-83 → T-85 → T-90 → T-92 → T-93.
 

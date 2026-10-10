@@ -29,6 +29,10 @@
 | OQ-53 | **APPROVED** (after Step 3) | New expense or income links to a COMPLETED/CANCELLED fundraiser → 409 `FUNDRAISER_CLOSED` (`details.fundraiserStatus`). Club check first (`FUNDRAISER_NOT_IN_CLUB`). |
 | OQ-38 | **APPROVED** (after Step 3) | Event organizers count as TEAM only for `GET /clubs/:clubId/finance/summary`. Fundraiser list and overview are club role holders only. Reimbursement submission keeps organizers because LLD §2.10 names them explicitly (see OQ-55). |
 | OQ-52 | **APPROVED** (after Step 3) | `GET /clubs/:clubId/reports/finance` is the first task of Step 4. |
+| OQ-59 | **APPROVED** (after Step 4) | `auth.getUser(userId, { trx }?)` and `clubs.listRoleHolders(clubId, role, { trx }?)` must use the caller's transaction. Contract: `backend/tests/contracts/group1Trx.contract.js`; Group 1 checks its code with `npm run test:contract:group1`. |
+| OQ-60 | **APPROVED** (after Step 4) | Members-only products stay visible to non-members with `membersOnly: true`; ordering stays blocked (`MEMBERS_ONLY_PRODUCT`). |
+| OQ-55 | **APPROVED** (after Step 4) | Organizers of a club event may submit reimbursements (LLD §2.10). |
+| OQ-64, OQ-66 | **ACCEPTED until Group 1 merges** | Current defaults stand; revisit when Group 1's handlers and club lookup exist. |
 | OQ-22 | **REVISED** (Step 3 §A4 spirit) | Display names come from the `TODO(group1)` stub `auth.getUsersByIds`, not from joins on `users`. |
 
 
@@ -279,7 +283,7 @@
 ### OQ-54 — Reconciliation check (d) with a missing source — OPEN
 - **Default:** a ledger row whose PAYMENT/EXPENSE source row is missing counts as a mismatch, the same as an unsettled source.
 
-### OQ-55 — Organizers submitting reimbursements — OPEN
+### OQ-55 — Organizers submitting reimbursements — APPROVED
 - **Sources:** OQ-38 (organizers are TEAM only for the summary) vs LLD §2.10 ("any club role holder or organizer of a club event" may submit).
 - **Default:** organizers may still submit reimbursements, and read them as the submitter. Every other finance or fundraiser endpoint treats an organizer without a club role as same-club non-member staff: 403. Say if organizers should lose reimbursement submission too.
 
@@ -299,11 +303,11 @@
 ### OQ-58 — Pickup codes in the club order list — OPEN
 - **Default:** codes are shown only to the buyer (`/me/orders`, simulate result). The club list (CH, TR) omits them, so the desk verifies a code the buyer presents and cannot read it off the list. `?q=` matches a pickup-code prefix.
 
-### OQ-59 — Group 1 lookups inside Group 2 transactions take `{ trx }` — OPEN (finding)
+### OQ-59 — Group 1 lookups inside Group 2 transactions take `{ trx }` — APPROVED
 - **Finding:** under 30 parallel orders the low-stock path ran `clubs.listRoleHolders` and `auth.getUser` on a second pool connection while its transaction held one. Every transaction waited for a connection and the pool starved (test timeout).
 - **Default:** both interfaces take an optional `{ trx }` and must use it: `auth.getUser(userId, { trx }?)`, `clubs.listRoleHolders(clubId, role, { trx }?)`. Group 1 should keep this when implementing them (CP-1).
 
-### OQ-60 — Members-only products in the public catalogue — OPEN
+### OQ-60 — Members-only products in the public catalogue — APPROVED
 - **Sources:** LLD §4.7 lists ACTIVE products publicly; the plan says "non-member visibility per flag".
 - **Default:** members-only products are listed for everyone with `membersOnly: true`. Ordering is blocked by PricingPolicy (`MEMBERS_ONLY_PRODUCT`), and a signed-in non-member sees `displayPrice: null`. Say if they should be hidden from non-members instead.
 
@@ -317,7 +321,7 @@
 ### OQ-63 — Published announcements and DELETE — OPEN
 - **Default:** the migration 012 trigger blocks UPDATE **and DELETE** of a PUBLISHED row (LLD names UPDATE; deletion would also erase the record). Drafts can be edited and deleted.
 
-### OQ-64 — `reservation-expiry` covers every purpose — OPEN
+### OQ-64 — `reservation-expiry` covers every purpose — ACCEPTED (until Group 1 merges)
 - **Default:** the job is payment-driven (OQ-09) and settles any expired payment. Group 2's MERCH_ORDER handler releases stock. Group 1 handlers do bookings and terms. Until Group 1 registers an EVENT_TICKET handler, such a payment would fail to expire and is counted as `failed` in the summary (none can exist without Group 1 bookings).
 
 ### OQ-65 — Finance report shape — OPEN
@@ -327,10 +331,11 @@
   - `categoryBreakdown`: every IN and OUT category with total and number of entries, zeros included
   `from`/`to` filter like the summary.
 
-### OQ-66 — Low-stock email content — OPEN
+### OQ-66 — Low-stock email content — ACCEPTED (until Group 1 merges)
 - **Default:** product name, size, available, threshold and an inventory link. There is no club name, because no Group 1 club lookup exists yet.
 
 ### OQ-67 — PricingPolicy test double — OPEN (disclosure)
+- **Consequence (recorded at the Step 4 checkpoint):** every order and quote test runs on this stand-in, so **the merchandise pricing rules (member discount, offers, BEST_OF/STACK) are unverified** until TC-MER-05 and the order flow run against Group 1's real PricingPolicy (Step 5 prerequisite).
 - **Default:** in tests only, `tests/helpers/group1Fakes.js` provides a LIST-price stand-in with the members-only gate, so order flows can run. It is not PricingPolicy. The runtime `pricing.quoteMerchItem` is a `TODO(group1)` stub, and TC-MER-05 stays skipped (OQ-07). Discounted-price paths are tested by overriding the stand-in per test.
 
 ## OD/ASM defaults affecting Group 2

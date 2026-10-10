@@ -18,7 +18,8 @@
     "test:unit": "vitest run tests/unit",
     "test:concurrency": "vitest run tests/concurrency",
     "lint:eslint": "eslint .",
-    "lint:money": "SKIP_DB_SETUP=1 vitest run tests/unit/noFloatMoney.test.js"
+    "lint:money": "SKIP_DB_SETUP=1 vitest run tests/unit/noFloatMoney.test.js",
+    "test:contract:group1": "GROUP1_CONTRACT_IMPL=src vitest run tests/contracts"
   },
   "dependencies": {
     "connect-pg-simple": "10.0.0",
