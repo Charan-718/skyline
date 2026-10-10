@@ -44,6 +44,7 @@ const envSchema = z.object({
     .string()
     .transform((v) => v !== 'false')
     .default('true'),
+  FUNDRAISER_AT_RISK_TOLERANCE_PCT: z.coerce.number().default(20),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -65,4 +66,5 @@ export const config = {
   isProduction: env.NODE_ENV === 'production',
   isTest: env.NODE_ENV === 'test',
   devToolsEnabled: env.DEV_TOOLS_ENABLED && env.NODE_ENV !== 'production',
+  fundraiserAtRiskTolerancePct: env.FUNDRAISER_AT_RISK_TOLERANCE_PCT,
 };

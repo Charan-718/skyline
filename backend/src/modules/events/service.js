@@ -7,6 +7,8 @@ import { assertTransition } from './domain/eventStateMachine.js';
 import { deriveSalesStatus } from './domain/salesWindow.js';
 import { PRICE_TIERS } from '../pricing/PricingPolicy.js';
 import { randomToken, ticketCode } from '../../shared/tokens.js';
+import { parsePagination, paginatedResponse } from '../../shared/pagination.js';
+import { presentEvent } from './eventPresenter.js';
 
 export function createEventService({
   eventRepository,
@@ -20,13 +22,50 @@ export function createEventService({
 
   return {
     async listEvents(query) {
-      return eventRepository.listPublished({ clubId: query.clubId, limit: 50 });
+      const { page, pageSize, offset } = parsePagination(query, { page: 1, pageSize: 20, maxPageSize: 100 });
+      const { rows, total } = await eventRepository.listPublished({
+        clubId: query.clubId,
+        q: query.q,
+        includePast: query.includePast,
+        offset,
+        limit: pageSize,
+      });
+      const ticketCounts = await eventRepository.countTicketsForEvents(rows.map((r) => r.id));
+      const data = rows.map((row) =>
+        presentEvent(
+          { ...row, clubId: row.clubId },
+          {
+            clubName: row.clubName ?? null,
+            clubSlug: row.clubSlug ?? null,
+            ticketsSold: ticketCounts[row.id] ?? 0,
+            organizers: [],
+            pricingPolicy,
+          },
+        ),
+      );
+      return paginatedResponse(data, page, pageSize, total);
     },
 
     async getEvent(eventId) {
       const event = await eventRepository.findById(eventId);
       assertFound(event, 'Event not found');
-      return event;
+      const club = await eventRepository.db('clubs').where({ id: event.clubId }).first();
+      const ticketsSold = await eventRepository.db('tickets')
+        .where({ event_id: eventId })
+        .whereNot({ status: 'CANCELLED' })
+        .count('* as c')
+        .first();
+      const orgRows = await eventRepository.db('event_organizers as o')
+        .join('users as u', 'u.id', 'o.user_id')
+        .where('o.event_id', eventId)
+        .select('o.user_id', 'u.full_name');
+      return presentEvent(event, {
+        clubName: club?.name ?? null,
+        clubSlug: club?.slug ?? null,
+        ticketsSold: Number(ticketsSold?.c ?? 0),
+        organizers: orgRows.map((o) => ({ userId: o.user_id, fullName: o.full_name })),
+        pricingPolicy,
+      });
     },
 
     async quote(actor, eventId) {

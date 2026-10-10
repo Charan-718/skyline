@@ -25,10 +25,37 @@ export function createEventRepository({ db }) {
     },
 
     async listPublished(filters, trx = db) {
-      let q = trx('events').where({ status: 'PUBLISHED' }).orderBy('starts_at');
-      if (filters.clubId) q = q.andWhere({ club_id: filters.clubId });
-      const rows = await q.limit(filters.limit ?? 50);
-      return rows.map(toCamelCase);
+      const statuses =
+        filters.includePast === true || filters.includePast === 'true'
+          ? ['PUBLISHED', 'COMPLETED']
+          : ['PUBLISHED'];
+      let q = trx('events as e')
+        .leftJoin('clubs as c', 'c.id', 'e.club_id')
+        .whereIn('e.status', statuses);
+      if (filters.clubId) q = q.andWhere('e.club_id', filters.clubId);
+      if (filters.q) {
+        const like = `%${filters.q}%`;
+        q = q.andWhere((b) => b.whereILike('e.title', like).orWhereILike('e.venue', like));
+      }
+      const countRow = await q.clone().count('* as c').first();
+      const total = Number(countRow.c);
+      const rows = await q
+        .orderBy('e.starts_at')
+        .offset(filters.offset ?? 0)
+        .limit(filters.limit ?? 20)
+        .select('e.*', 'c.name as club_name', 'c.slug as club_slug');
+      return { rows: rows.map((r) => toCamelCase(r)), total };
+    },
+
+    async countTicketsForEvents(eventIds, trx = db) {
+      if (!eventIds.length) return {};
+      const rows = await trx('tickets')
+        .whereIn('event_id', eventIds)
+        .whereNot({ status: 'CANCELLED' })
+        .groupBy('event_id')
+        .select('event_id')
+        .count('* as c');
+      return Object.fromEntries(rows.map((r) => [r.event_id, Number(r.c)]));
     },
 
     async reserveSeat(eventId, usesEarlyBird, trx) {

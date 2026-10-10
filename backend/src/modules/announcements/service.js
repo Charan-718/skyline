@@ -1,6 +1,7 @@
 import { AppError, assertFound } from '../../shared/errors.js';
 import { withTransaction } from '../../db/transaction.js';
 import { todayIST } from '../../shared/clock.js';
+import { parsePagination, paginatedResponse } from '../../shared/pagination.js';
 
 export function createAnnouncementService({
   announcementRepository,
@@ -75,7 +76,14 @@ export function createAnnouncementService({
     },
 
     async list(query) {
-      return announcementRepository.listPublished({ clubId: query.clubId });
+      const { page, pageSize, offset } = parsePagination(query, { page: 1, pageSize: 20, maxPageSize: 100 });
+      const { rows, total } = await announcementRepository.listPublished({
+        clubId: query.clubId,
+        category: query.category,
+        offset,
+        limit: pageSize,
+      });
+      return paginatedResponse(rows, page, pageSize, total);
     },
 
     async get(id) {

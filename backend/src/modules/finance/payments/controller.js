@@ -16,8 +16,8 @@ export function createPaymentController({ paymentService }) {
     },
 
     async listMine(req, res) {
-      const rows = await paymentService.listMine?.(req.userId, req.query);
-      res.json({ data: rows ?? [] });
+      const body = await paymentService.listMine(req.userId, req.query);
+      res.json(body);
     },
   };
 }

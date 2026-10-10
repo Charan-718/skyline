@@ -1,14 +1,32 @@
-// TODO(group1): interface stub. Group 1 (T-40) owns PricingPolicy (LLD §2.6); Group 2 must not
-// implement a substitute (OQ-07 APPROVED). Merchandise calls this for every quote and order.
+import { applyBps } from '../../shared/money.js';
+import { appError } from '../../shared/errors.js';
 
 /**
- * quoteMerchItem(product, benefits | null, now, { mode }) ->
- *   { listPricePaise, discountPaise, finalPricePaise, priceRule }   (per unit, integer paise)
- * product: { pricePaise, memberDiscountEligible, availableToNonMembers, offerPricePaise,
- *            offerStartsAt, offerEndsAt }
- * benefits: memberships.getActiveBenefits(...) result; mode: PRICING_COMBINATION_MODE (OD-01).
- * Throws AppError MEMBERS_ONLY_PRODUCT when benefits is null and the product is members-only.
+ * quoteMerchItem(product, benefits | null, now, { mode }) — live pricing for merchandise (LLD §2.6).
  */
-export async function quoteMerchItem(_product, _benefits, _now, _options) {
-  throw new Error('TODO(group1): pricing.quoteMerchItem is not implemented yet');
+export async function quoteMerchItem(product, benefits, now, { mode = 'BEST_OF' } = {}) {
+  if (!benefits && !product.availableToNonMembers) {
+    throw appError('MEMBERS_ONLY_PRODUCT');
+  }
+  let listPricePaise = Number(product.pricePaise);
+  let priceRule = 'LIST';
+  const offerStart = product.offerStartsAt ? new Date(product.offerStartsAt).getTime() : null;
+  const offerEnd = product.offerEndsAt ? new Date(product.offerEndsAt).getTime() : null;
+  const t = now.getTime();
+  if (product.offerPricePaise != null && offerStart != null && offerEnd != null && t >= offerStart && t <= offerEnd) {
+    listPricePaise = Number(product.offerPricePaise);
+    priceRule = 'OFFER';
+  }
+  let discountPaise = 0;
+  if (benefits && product.memberDiscountEligible !== false) {
+    const memberDisc = applyBps(listPricePaise, benefits.merchDiscountBps ?? 0);
+    if (memberDisc > 0) {
+      discountPaise = memberDisc;
+      priceRule = 'MEMBER_DISCOUNT';
+    }
+  }
+  const finalPricePaise = Math.max(0, listPricePaise - discountPaise);
+  return { listPricePaise, discountPaise, finalPricePaise, priceRule };
 }
+
+export { createPricingPolicy } from './PricingPolicy.js';

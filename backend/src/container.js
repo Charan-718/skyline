@@ -29,7 +29,10 @@ import {
   createPaymentRoutes,
 } from './modules/finance/payments/index.js';
 
-import { createLedgerRepository, createLedgerService } from './modules/finance/ledger/index.js';
+import { createLedgerService } from './modules/finance/ledger/index.js';
+import { logger } from './shared/logger.js';
+import { createGroup1Bridge } from './integration/group1Bridge.js';
+import { wireGroup2 } from './integration/wireGroup2.js';
 
 import { createNotificationRepository, createNotificationService } from './modules/notifications/index.js';
 
@@ -58,7 +61,7 @@ import {
   createAnnouncementRoutes,
 } from './modules/announcements/index.js';
 
-import { createEventReportService, createReportingRoutes } from './modules/reporting/index.js';
+import { createEventReportService, createEventReportingRoutes } from './modules/reporting/index.js';
 
 import { createMembershipExpiryJob } from './jobs/definitions/membershipExpiry.js';
 import { createRenewalRemindersJob } from './jobs/definitions/renewalReminders.js';
@@ -86,8 +89,8 @@ export function createContainer() {
     auditRepository,
   });
 
-  const ledgerRepository = createLedgerRepository({ db });
-  const ledgerService = createLedgerService({ ledgerRepository });
+  const ledgerService = createLedgerService({ db, logger });
+  const group1Bridge = createGroup1Bridge({ db, authRepository, authz });
 
   const notificationRepository = createNotificationRepository({ db });
   const notificationService = createNotificationService({ notificationRepository });
@@ -179,8 +182,11 @@ export function createContainer() {
     memberships: createMembershipRoutes({ membershipController, authz }),
     events: createEventRoutes({ eventController, authz }),
     announcements: createAnnouncementRoutes({ announcementController, authz }),
-    reporting: createReportingRoutes({ eventReportService, authz, eventRepository }),
+    reporting: createEventReportingRoutes({ eventReportService, authz, eventRepository }),
   };
+
+  const group2 = wireGroup2({ db, config, bridge: group1Bridge });
+  routes.group2 = group2.router;
 
   const jobs = {
     membershipExpiry: createMembershipExpiryJob({ db }),
