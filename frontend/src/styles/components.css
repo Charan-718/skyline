@@ -915,8 +915,8 @@ a.cell-title:hover {
   border-color: var(--color-accent);
 }
 
-/* Dropdown list: themed where the browser lets us (all engines style option colours;
-   Chromium's customizable select also styles the popup itself). */
+/* Dropdown list: option colours are themed in every engine; Chromium's customizable select
+   (appearance: base-select) also styles the popup itself. */
 .select option {
   background: var(--color-surface-elevated);
   color: var(--color-text-primary);
