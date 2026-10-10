@@ -232,6 +232,7 @@ export function createSeed() {
   };
   const apparel = cat(sky, 'Apparel');
   const accessories = cat(sky, 'Accessories');
+  const roboKits = cat(robo, 'Kits');
   const mkProduct = (club, category, p, sizes) => {
     const product = { id: uid('prd'), clubId: club.id, categoryId: category.id, status: 'ACTIVE', memberDiscountEligible: true, availableToNonMembers: true, offerPricePaise: null, offerStartsAt: null, offerEndsAt: null, createdAt: daysFromNow(-90), ...p };
     db.products.push(product);
@@ -249,6 +250,7 @@ export function createSeed() {
   mkProduct(sky, accessories, { name: 'Club Pen', description: 'Metal ballpoint with a soft grip and printed logo.', pricePaise: 4900, memberDiscountEligible: false, imageUrl: '/merch/pen.webp' }, [['ONE_SIZE', 80, 10]]);
   mkProduct(sky, accessories, { name: '32 GB USB Drive', description: 'Capped USB 3.0 drive, preloaded with the club handbook.', pricePaise: 34900, imageUrl: '/merch/usb.webp' }, [['ONE_SIZE', 20, 4]]);
   mkProduct(sky, accessories, { name: 'Desk Flag', description: 'Mini desk flag with stand for your study table.', pricePaise: 14900, imageUrl: '/merch/flag.webp' }, [['ONE_SIZE', 15, 3]]);
+  mkProduct(robo, roboKits, { name: 'Line Follower Starter Kit', description: 'Chassis, motors, sensor array and driver board.', pricePaise: 149900 }, [['ONE_SIZE', 12, 3]]);
 
   const variantsOf = (p) => db.variants.filter((v) => v.productId === p.id);
   const merchQuote = (product, user) => {
