@@ -35,9 +35,15 @@ export function createSmtpEmailAdapter({ host, port, secure, user, pass, fromEma
   const from = { name: fromName, address: fromEmail };
   return Object.freeze({
     channel: 'EMAIL',
-    async send({ to, subject, text }) {
+    async send({ to, subject, text, html }) {
       try {
-        const info = await mailer.sendMail({ from, to, subject, text });
+        const info = await mailer.sendMail({
+          from,
+          to,
+          subject,
+          text,
+          ...(html ? { html } : {}),
+        });
         return { provider: 'smtp', providerMessageId: info?.messageId ?? null };
       } catch (err) {
         throw toNotificationError(err);
