@@ -2374,3 +2374,29 @@ button.task-card:hover {
   letter-spacing: 0.06em;
   -webkit-text-stroke: 0.4px currentColor;
 }
+
+/* Cart line: product thumbnail beside the name, size and quantity controls. */
+.cart-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.cart-thumb {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 96px;
+  aspect-ratio: 1;
+  padding: var(--space-2);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+}
+
+.cart-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
