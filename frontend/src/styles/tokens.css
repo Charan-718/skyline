@@ -1,0 +1,229 @@
+/*
+ * Design tokens: the only place raw colour, type, space and motion values live.
+ * Components consume semantic names (--color-surface, --color-primary…), so a new
+ * palette means editing the two theme blocks below and nothing else.
+ *
+ * Palette: editorial "paper, ink, violet".
+ *   60%  paper  (warm cream canvas and surfaces)
+ *   30%  ink    (text, rules, primary actions)
+ *   10%  violet (links, active/selected states, focus, labels)
+ */
+
+/* Brand face: the "Campus Flow" wordmark and headings. */
+@font-face {
+  font-family: 'Benso Yolmi';
+  src: url('./Benso Yolmi Demo.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* ── Type families ───────────────────────────── */
+  --font-family-brand: 'Benso Yolmi', var(--font-family-display);
+  --font-family-display: 'Big Shoulders Display', 'Arial Narrow', sans-serif;
+  --font-family-serif: 'Instrument Serif', Georgia, serif;
+  --font-family-sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-family-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  /*
+   * Type scale. Anchored at 16px with steps of √φ (≈1.272), so every second step is a
+   * full golden-ratio jump (16 → 25.9 → 41.9). The two small steps sit below the scale
+   * for labels and table text, where readability beats the ratio.
+   */
+  --font-size-xs: 0.75rem; /* 12  labels, captions */
+  --font-size-sm: 0.8125rem; /* 13  meta text */
+  --font-size-md: 0.875rem; /* 14  tables, dense UI */
+  --font-size-base: 1rem; /* 16  body */
+  --font-size-lg: 1.272rem; /* 20.4 */
+  --font-size-xl: 1.618rem; /* 25.9  φ */
+  --font-size-2xl: 2.058rem; /* 32.9 */
+  --font-size-3xl: 2.618rem; /* 41.9  φ² */
+  --font-size-display: clamp(2.618rem, 2rem + 3.2vw, 4.236rem); /* φ² → φ³ */
+  --font-size-title: clamp(2.058rem, 1.7rem + 1.6vw, 2.618rem);
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-black: 800;
+
+  --line-height-tight: 0.95;
+  --line-height-heading: 1.2;
+  --line-height-body: 1.55;
+
+  --letter-spacing-label: 0.08em;
+  --letter-spacing-display: 0.005em;
+
+  /* ── Spacing (4px base) ──────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ── Radius: editorial, nearly square ────────── */
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
+  --radius-full: 999px;
+
+  /* ── Depth: borders do the work; shadows only lift floating layers ── */
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow-md: 0 1px 0 var(--color-border);
+  --shadow-lg: 0 12px 32px rgba(22, 20, 18, 0.14);
+
+  /* ── Motion ──────────────────────────────────── */
+  --duration-fast: 100ms;
+  --duration-normal: 160ms;
+  --duration-slow: 240ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
+
+  /* ── Layout ──────────────────────────────────── */
+  --container-max: 1280px;
+  --container-reading: 68ch;
+  --sidebar-width: 252px;
+  --header-height: 56px;
+
+  --z-sticky: 20;
+  --z-overlay: 40;
+  --z-modal: 100;
+  --z-toast: 1000;
+
+  /* ── Light theme ─────────────────────────────── */
+  --color-bg: #f1ece3; /* paper */
+  --color-surface: #f6f2eb;
+  --color-surface-elevated: #fbf9f5;
+  --color-surface-muted: #e9e3d8;
+  --color-surface-interactive: #e4ddd0;
+  --color-scrim: rgba(22, 20, 18, 0.5);
+
+  --color-text-primary: #161412; /* ink */
+  --color-text-secondary: #4a4540;
+  --color-text-muted: #6b645b;
+  --color-text-inverse: #f6f2eb;
+
+  --color-border: rgba(22, 20, 18, 0.16);
+  --color-border-subtle: rgba(22, 20, 18, 0.09);
+  --color-border-strong: #161412;
+
+  --color-primary: #161412; /* ink: primary actions */
+  --color-primary-hover: #2e2a26;
+  --color-primary-active: #000000;
+  --color-primary-soft: #e4ddd0;
+  --color-on-primary: #f6f2eb;
+
+  --color-accent: #5b1fc9; /* violet: links, active, focus */
+  --color-accent-hover: #4a16a8;
+  --color-accent-soft: #e6ddf6;
+
+  --color-success: #2f6b3a;
+  --color-success-soft: #dde8d6;
+  --color-warning: #8a5a00;
+  --color-warning-soft: #f1e2c2;
+  --color-error: #a1301f;
+  --color-error-soft: #f2d9d0;
+  --color-info: #2c4a6b;
+  --color-info-soft: #d9e1e8;
+  --color-neutral-soft: #e4ddd0;
+
+  --color-focus: #5b1fc9;
+
+  /* Chart series: ink, violet and earth tones. No rainbow. */
+  --color-chart-1: #161412;
+  --color-chart-2: #5b1fc9;
+  --color-chart-3: #a8763e;
+  --color-chart-4: #9a9187;
+  --color-chart-5: #b9a2e8;
+  --color-chart-6: #5e7a5a;
+  --color-chart-grid: rgba(22, 20, 18, 0.1);
+
+  color-scheme: light;
+}
+
+/*
+ * Dark theme: warm charcoal, not black. Text is the paper colour, the accent is a
+ * desaturated lavender so it reads without glowing. ThemeProvider sets data-theme.
+ */
+:root[data-theme='dark'] {
+  --color-bg: #191714;
+  --color-surface: #201e1a;
+  --color-surface-elevated: #2a2722;
+  --color-surface-muted: #24211d;
+  --color-surface-interactive: #302c27;
+  --color-scrim: rgba(8, 7, 6, 0.66);
+
+  --color-text-primary: #efe9df;
+  --color-text-secondary: #c4bcaf;
+  --color-text-muted: #9a9286;
+  --color-text-inverse: #191714;
+
+  --color-border: rgba(239, 233, 223, 0.14);
+  --color-border-subtle: rgba(239, 233, 223, 0.08);
+  --color-border-strong: #c4bcaf;
+
+  --color-primary: #efe9df;
+  --color-primary-hover: #ffffff;
+  --color-primary-active: #d9d2c6;
+  --color-primary-soft: #302c27;
+  --color-on-primary: #191714;
+
+  --color-accent: #b9a2f2;
+  --color-accent-hover: #cdbcf6;
+  --color-accent-soft: #2e2840;
+
+  --color-success: #8cc496;
+  --color-success-soft: #22301f;
+  --color-warning: #e2b35f;
+  --color-warning-soft: #352a15;
+  --color-error: #ec8b75;
+  --color-error-soft: #3a211b;
+  --color-info: #9dbbdc;
+  --color-info-soft: #1f2a35;
+  --color-neutral-soft: #302c27;
+
+  --color-focus: #b9a2f2;
+
+  --color-chart-1: #efe9df;
+  --color-chart-2: #b9a2f2;
+  --color-chart-3: #d3a05f;
+  --color-chart-4: #8a8276;
+  --color-chart-5: #6f5aa8;
+  --color-chart-6: #8fb38a;
+  --color-chart-grid: rgba(239, 233, 223, 0.1);
+
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45);
+
+  color-scheme: dark;
+}
+
+/* Theme-independent: QR codes and the camera viewport stay dark-on-light / dark for scanner contrast. */
+:root {
+  --color-qr-bg: #ffffff;
+  --color-qr-fg: #161412;
+  --color-camera-bg: #161412;
+  --color-camera-text: #c4bcaf;
+
+  /* Launch screen: a night backdrop behind the campus photo in either theme. */
+  --color-splash-bg: #12100e;
+  --color-splash-text: #efe9df;
+  --color-splash-muted: #9a9286;
+  --color-splash-track: rgba(239, 233, 223, 0.16);
+}
+
+/* Aliases so `tone="danger"` maps to the semantic error colour. */
+:root,
+:root[data-theme='dark'] {
+  --color-danger: var(--color-error);
+  --color-danger-soft: var(--color-error-soft);
+}
