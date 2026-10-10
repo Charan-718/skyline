@@ -17,14 +17,24 @@ function categoryMapFromBreakdown(rows) {
   return Object.fromEntries(rows.map((row) => [row.category, Number(row.totalPaise) || 0]));
 }
 
+function paise(raw) {
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function normalizeFinanceReport(raw) {
   const breakdown = raw?.categoryBreakdown;
   return {
-    totalIncomePaise: raw?.totalIncomePaise ?? 0,
-    totalPaidExpensesPaise: raw?.totalPaidExpensesPaise ?? 0,
-    availableBalancePaise: raw?.availableBalancePaise ?? 0,
-    projectedBalancePaise: raw?.projectedBalancePaise ?? 0,
-    monthly: raw?.monthly ?? [],
+    totalIncomePaise: paise(raw?.totalIncomePaise),
+    totalPaidExpensesPaise: paise(raw?.totalPaidExpensesPaise),
+    availableBalancePaise: paise(raw?.availableBalancePaise),
+    projectedBalancePaise: paise(raw?.projectedBalancePaise),
+    monthly: (raw?.monthly ?? []).map((m) => ({
+      ...m,
+      inPaise: paise(m.inPaise),
+      outPaise: paise(m.outPaise),
+      netPaise: paise(m.netPaise ?? paise(m.inPaise) - paise(m.outPaise)),
+    })),
     incomeByCategory: raw?.incomeByCategory ?? categoryMapFromBreakdown(breakdown?.IN),
     outByCategory: raw?.outByCategory ?? categoryMapFromBreakdown(breakdown?.OUT),
   };

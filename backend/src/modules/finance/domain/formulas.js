@@ -12,19 +12,30 @@ import { LEDGER_CATEGORIES } from './ledgerRules.js';
 //                        remaining = amount − spent; remainingAfterCommitted = remaining − committed
 // Refunds are not supported (OD-08): gross recorded revenue = net.
 
+/** Postgres `bigint` aggregates arrive as strings — always coerce before math. */
+export function paiseInt(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.trunc(n) : 0;
+}
+
 export function summarize({ periodByCategory, allTimeIn, allTimeOut, approvedUnpaid, pendingReview }) {
-  const incomeByCategory = Object.fromEntries(LEDGER_CATEGORIES.IN.map((c) => [c, periodByCategory.IN?.[c] ?? 0]));
+  const incomeByCategory = Object.fromEntries(
+    LEDGER_CATEGORIES.IN.map((c) => [c, paiseInt(periodByCategory.IN?.[c])]),
+  );
   const totalIncome = Object.values(incomeByCategory).reduce((a, b) => a + b, 0);
-  const totalPaidExpenses = LEDGER_CATEGORIES.OUT.reduce((a, c) => a + (periodByCategory.OUT?.[c] ?? 0), 0);
-  const availableBalance = allTimeIn - allTimeOut;
+  const totalPaidExpenses = LEDGER_CATEGORIES.OUT.reduce(
+    (a, c) => a + paiseInt(periodByCategory.OUT?.[c]),
+    0,
+  );
+  const availableBalance = paiseInt(allTimeIn) - paiseInt(allTimeOut);
   return {
     totalIncomePaise: totalIncome,
     incomeByCategory,
     totalPaidExpensesPaise: totalPaidExpenses,
     availableBalancePaise: availableBalance,
-    approvedUnpaidTotalPaise: approvedUnpaid,
-    pendingReviewTotalPaise: pendingReview,
-    projectedBalancePaise: availableBalance - approvedUnpaid,
+    approvedUnpaidTotalPaise: paiseInt(approvedUnpaid),
+    pendingReviewTotalPaise: paiseInt(pendingReview),
+    projectedBalancePaise: availableBalance - paiseInt(approvedUnpaid),
   };
 }
 
