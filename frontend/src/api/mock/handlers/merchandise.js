@@ -30,15 +30,21 @@ function orderView(db, o) {
   return { ...o, clubName: clubOf(db, o.clubId)?.name, buyerName: u?.fullName, buyerEmail: u?.email, items, itemCount: items.reduce((s, i) => s + i.quantity, 0), paymentStatus: payment?.status, paymentId: payment?.id, pickupCode: ['CONFIRMED', 'PICKED_UP'].includes(o.status) ? o.pickupCode : null, pickedUpByName: userName(db, o.pickedUpBy) };
 }
 
+function resolveClubId(db, clubId) {
+  const c = db.clubs.find((x) => x.id === clubId || x.slug === clubId);
+  return c ? c.id : clubId;
+}
+
 function parseItems(db, clubId, user, items) {
   if (!items.length) throw err(400, 'VALIDATION_FAILED', 'Your cart is empty.');
   if (items.length > 10) throw err(400, 'TOO_MANY_ITEMS', 'An order can have at most 10 lines.');
+  const targetId = resolveClubId(db, clubId);
   return items.map(({ variantId, quantity }) => {
-    const variant = db.variants.find((v) => v.id === variantId && v.clubId === clubId);
+    const variant = db.variants.find((v) => v.id === variantId && (v.clubId === targetId || v.clubId === clubId));
     const product = variant && db.products.find((p) => p.id === variant.productId);
     if (!variant || !product || product.status !== 'ACTIVE' || !variant.isActive) throw err(422, 'PRODUCT_NOT_ORDERABLE', 'One of the items is no longer available.', { variantId });
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) throw err(400, 'VALIDATION_FAILED', 'Quantity must be 1–10.');
-    const quote = quoteMerchItem(db, product, user.id);
+    const quote = quoteMerchItem(db, product, user?.id);
     if (!quote.eligible) throw err(422, 'MEMBERS_ONLY_PRODUCT', `${product.name} is for club members only.`, { variantId });
     const available = variant.stockOnHand - variant.stockReserved;
     return { variant, product, quantity, quote, available };
@@ -46,7 +52,10 @@ function parseItems(db, clubId, user, items) {
 }
 
 export const routes = [
-  ['GET', '/clubs/:clubId/product-categories', ({ db, params }) => ok(db.categories.filter((c) => c.clubId === params.clubId))],
+  ['GET', '/clubs/:clubId/product-categories', ({ db, params }) => {
+    const targetId = resolveClubId(db, params.clubId);
+    return ok(db.categories.filter((c) => c.clubId === targetId));
+  }],
   ['POST', '/clubs/:clubId/product-categories', (ctx) => {
     requireClubRole(ctx, ctx.params.clubId, ['CLUB_HEAD']);
     const name = String(ctx.body.name || '').trim();
@@ -57,9 +66,10 @@ export const routes = [
     return created(c);
   }],
   ['GET', '/clubs/:clubId/products', ({ db, user, params, query }) => {
-    findOr404(db.clubs, params.clubId, 'Club');
-    const head = user && hasRole(db, user.id, params.clubId, ['CLUB_HEAD', 'TREASURER']);
-    return ok(db.products.filter((p) => p.clubId === params.clubId && (query.all === 'true' && head ? true : p.status === 'ACTIVE') && (!query.categoryId || p.categoryId === query.categoryId)).map((p) => productView(db, p, user)));
+    const targetId = resolveClubId(db, params.clubId);
+    findOr404(db.clubs, targetId, 'Club');
+    const head = user && hasRole(db, user.id, targetId, ['CLUB_HEAD', 'TREASURER']);
+    return ok(db.products.filter((p) => p.clubId === targetId && (query.all === 'true' && head ? true : p.status === 'ACTIVE') && (!query.categoryId || p.categoryId === query.categoryId)).map((p) => productView(db, p, user)));
   }],
   ['GET', '/products/:productId', ({ db, user, params }) => {
     const p = findOr404(db.products, params.productId, 'Product');
@@ -166,11 +176,12 @@ export const routes = [
   }],
   ['GET', '/clubs/:clubId/orders/quote', (ctx) => {
     const user = requireUser(ctx);
+    const targetId = resolveClubId(ctx.db, ctx.params.clubId);
     const items = String(ctx.query.items || '').split(',').filter(Boolean).map((s) => {
       const [variantId, q] = s.split(':');
       return { variantId, quantity: parseInt(q, 10) };
     });
-    const lines = parseItems(ctx.db, ctx.params.clubId, user, items);
+    const lines = parseItems(ctx.db, targetId, user, items);
     return ok({
       lines: lines.map((l) => ({ variantId: l.variant.id, productName: l.product.name, sizeLabel: l.variant.sizeLabel, quantity: l.quantity, available: l.available, ...l.quote, lineTotalPaise: l.quote.finalPricePaise * l.quantity })),
       totalPaise: lines.reduce((s, l) => s + l.quote.finalPricePaise * l.quantity, 0),
@@ -180,10 +191,11 @@ export const routes = [
   ['POST', '/clubs/:clubId/orders', (ctx) => {
     const user = requireUser(ctx);
     const { db, body, params } = ctx;
-    const lines = parseItems(db, params.clubId, user, body.items || []);
+    const targetId = resolveClubId(db, params.clubId);
+    const lines = parseItems(db, targetId, user, body.items || []);
     const total = lines.reduce((s, l) => s + l.quote.finalPricePaise * l.quantity, 0);
     if (body.expectedTotalPaise !== total) throw err(409, 'PRICE_CHANGED', 'Prices in your cart changed. Review the new total and confirm.', { totalPaise: total });
-    const { order, payment } = placeOrder(db, { userId: user.id, clubId: params.clubId, lines });
+    const { order, payment } = placeOrder(db, { userId: user.id, clubId: targetId, lines });
     return created({ order: orderView(db, order), payment });
   }],
   ['POST', '/orders/:orderId/cancel', (ctx) => {

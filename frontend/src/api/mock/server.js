@@ -95,10 +95,41 @@ function bodyToObject(body) {
   return body || {};
 }
 
+let clubsSynced = false;
+async function ensureClubsSynced(database) {
+  if (clubsSynced || typeof window === 'undefined' || typeof fetch === 'undefined') return;
+  try {
+    const res = await fetch('/api/v1/clubs');
+    if (!res.ok) return;
+    const json = await res.json();
+    const remoteClubs = json?.data;
+    if (Array.isArray(remoteClubs)) {
+      clubsSynced = true;
+      for (const rc of remoteClubs) {
+        const local = database.clubs.find((c) => c.slug === rc.slug || c.id === rc.id);
+        if (local && local.id !== rc.id) {
+          const oldId = local.id;
+          local.id = rc.id;
+          for (const p of database.products) if (p.clubId === oldId) p.clubId = rc.id;
+          for (const v of database.variants) if (v.clubId === oldId) v.clubId = rc.id;
+          for (const cat of database.categories) if (cat.clubId === oldId) cat.clubId = rc.id;
+          for (const o of database.orders) if (o.clubId === oldId) o.clubId = rc.id;
+          for (const m of database.memberships) if (m.clubId === oldId) m.clubId = rc.id;
+          for (const r of database.roles) if (r.clubId === oldId) r.clubId = rc.id;
+        }
+      }
+      persist();
+    }
+  } catch {
+    /* fallback to local ids */
+  }
+}
+
 export async function handle({ method, path, query = {}, body, headers = {} }) {
   const requestId = `req_${uid('').slice(1, 9)}`;
   if (process.env.NODE_ENV !== 'test') await sleep(method === 'GET' ? 180 + Math.random() * 220 : 300 + Math.random() * 300);
   const database = getDb();
+  await ensureClubsSynced(database);
 
   let match = null;
   let params = {};
@@ -114,7 +145,15 @@ export async function handle({ method, path, query = {}, body, headers = {} }) {
   if (!match) return envelope(404, 'NOT_FOUND', 'Not found.', null, requestId);
 
   const sid = storage.get(SESSION_KEY);
-  const user = sid ? database.users.find((u) => u.id === sid) || null : null;
+  let user = sid ? database.users.find((u) => u.id === sid) || null : null;
+  if (!user && typeof window !== 'undefined' && window.__CURRENT_USER__) {
+    const liveUser = window.__CURRENT_USER__;
+    user = database.users.find((u) => u.email === liveUser.email || u.id === liveUser.id);
+    if (!user) {
+      user = { id: liveUser.id, fullName: liveUser.fullName, email: liveUser.email, isActive: true };
+      database.users.push(user);
+    }
+  }
   const idemKey = headers['Idempotency-Key'];
   const idemStoreKey = idemKey && `${user?.id || 'anon'}:${idemKey}`;
   if (idemStoreKey && database.idempotency[idemStoreKey]) return database.idempotency[idemStoreKey];

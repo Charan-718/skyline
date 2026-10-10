@@ -59,14 +59,29 @@ async function httpTransport({ method, path, query, body, headers }) {
   return { status: res.status, body: parsed, requestId: res.headers.get('x-request-id') };
 }
 
+export function isMerchPath(path) {
+  return (
+    /\/clubs\/[^/]+\/(products|product-categories|orders(\/quote)?|inventory|low-stock-alerts|pickups|reports\/merchandise)/.test(path) ||
+    /^\/(products|variants|orders)(\/|$)/.test(path) ||
+    /^\/me\/orders(\/|$)/.test(path) ||
+    /^\/payments\/pay_[^/]+(\/simulate)?$/.test(path)
+  );
+}
+
 let mockTransport = null;
-async function getTransport() {
-  if (API_MODE !== 'mock') return httpTransport;
+async function getMockTransport() {
   if (!mockTransport) {
     const mod = await import('./mock/server');
     mockTransport = mod.handle;
   }
   return mockTransport;
+}
+
+async function getTransport(path) {
+  if (API_MODE === 'mock' || isMerchPath(path)) {
+    return getMockTransport();
+  }
+  return httpTransport;
 }
 
 /**
@@ -78,10 +93,22 @@ export async function request(method, path, { query, body, idempotencyKey } = {}
   if (method !== 'GET') headers['X-Requested-With'] = 'soms';
   if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
 
-  const transport = await getTransport();
+  const transport = await getTransport(path);
   const res = await transport({ method, path, query, body, headers });
 
-  if (res.status >= 200 && res.status < 300) return res.body;
+  if (res.status >= 200 && res.status < 300) {
+    if (path === '/auth/me' || path === '/auth/login') {
+      const u = res.body?.data?.user || res.body?.user;
+      if (u && typeof window !== 'undefined') {
+        window.__CURRENT_USER__ = u;
+      }
+    } else if (path === '/auth/logout') {
+      if (typeof window !== 'undefined') {
+        window.__CURRENT_USER__ = null;
+      }
+    }
+    return res.body;
+  }
 
   const err = res.body?.error || {};
   const apiError = new ApiError({
