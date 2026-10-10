@@ -4,19 +4,27 @@ import { APP_NAME } from './Brand';
 export const SPLASH_MS = 5000;
 const SEGMENTS = 18;
 
-// Shown once per page load: remounting App (tests, hot reload) doesn't replay it.
-let shown = process.env.NODE_ENV === 'test';
+const hasSeenSplash = () => {
+  if (process.env.NODE_ENV === 'test') return true;
+  try {
+    return sessionStorage.getItem('hasSeenSplash') === 'true';
+  } catch (e) {
+    return false;
+  }
+};
 
 export function useSplash() {
-  const [visible, setVisible] = useState(!shown);
+  const [visible, setVisible] = useState(!hasSeenSplash());
+  
   useEffect(() => {
     if (!visible) return undefined;
     const timer = setTimeout(() => {
-      shown = true;
+      try { sessionStorage.setItem('hasSeenSplash', 'true'); } catch (e) {}
       setVisible(false);
     }, SPLASH_MS);
     return () => clearTimeout(timer);
   }, [visible]);
+  
   return visible;
 }
 
