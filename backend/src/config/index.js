@@ -39,7 +39,19 @@ const envSchema = z.object({
     ),
   COLLEGE_VERIFICATION_MODE: z.enum(['mock', 'database', 'unconfigured']).default('database'),
   VERIFICATION_HASH_KEY: z.string().min(8).default('dev-key-change-me'),
-  NOTIFY_MODE: z.enum(['dev', 'unconfigured']).default('dev'),
+  NOTIFY_MODE: z.enum(['dev', 'unconfigured', 'smtp']).default('dev'),
+  /** Used in links inside notifications (renew URL). */
+  APP_BASE_URL: z.string().default('http://localhost:3000'),
+  /** SMTP mailbox for email (only read when NOTIFY_MODE=smtp). Gmail: smtp.gmail.com:465 + App Password. */
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().default(465),
+  /** true = TLS from the start (port 465); false = STARTTLS upgrade (port 587). Default follows the port. */
+  SMTP_SECURE: z.enum(['true', 'false']).optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  /** Defaults to SMTP_USER. Gmail rewrites the sender to the authenticated account. */
+  SMTP_FROM_EMAIL: z.string().optional(),
+  SMTP_FROM_NAME: z.string().default('SOMS'),
   DEV_NOTIFY_FAIL_CHANNEL: z.string().optional(),
   SIM_AUTOPAY_OUTCOME: z.enum(['SUCCEEDED', 'FAILED', 'PENDING']).default('SUCCEEDED'),
   DEV_TOOLS_ENABLED: z
@@ -77,4 +89,13 @@ export const config = {
   isTest: env.NODE_ENV === 'test',
   devToolsEnabled: env.DEV_TOOLS_ENABLED && env.NODE_ENV !== 'production',
   fundraiserAtRiskTolerancePct: env.FUNDRAISER_AT_RISK_TOLERANCE_PCT,
+  smtp: {
+    host: env.SMTP_HOST,
+    port: env.SMTP_PORT,
+    secure: env.SMTP_SECURE ? env.SMTP_SECURE === 'true' : env.SMTP_PORT === 465,
+    user: env.SMTP_USER,
+    pass: env.SMTP_PASS,
+    fromEmail: env.SMTP_FROM_EMAIL || env.SMTP_USER,
+    fromName: env.SMTP_FROM_NAME,
+  },
 };

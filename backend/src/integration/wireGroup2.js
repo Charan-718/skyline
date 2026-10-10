@@ -91,5 +91,5 @@ export function wireGroup2({ db, config, bridge: bridgeIn }) {
   router.use(fundraisers.routes(routeDeps));
   router.use(reporting.routes(routeDeps));
 
-  return Object.freeze({ router, finance, merchandise, fundraisers, notifications, bridge });
+  return Object.freeze({ router, routeDeps, finance, merchandise, fundraisers, notifications, bridge });
 }

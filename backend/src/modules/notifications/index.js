@@ -13,11 +13,12 @@ export function createNotificationsModule({ db, clock, auth, config, logger, ada
     clock,
     auth,
     logger,
-    adapters: adapters ?? createAdapters({ mode: config.notifyMode, failChannel: config.devNotifyFailChannel }),
+    adapters: adapters ?? createAdapters({ mode: config.notifyMode, failChannel: config.devNotifyFailChannel, smtp: config.smtp }),
   });
   return Object.freeze({
     enqueue: notifications.enqueue,
     dispatchPending: notifications.dispatchPending,
+    outbox: notifications.outbox,
     devRoutes: (deps) =>
       createNotificationDevRoutes({ controller: createNotificationController({ notifications }), ...deps }),
   });

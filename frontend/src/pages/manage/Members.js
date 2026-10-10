@@ -39,7 +39,7 @@ export default function Members() {
           {(r) => (
             <div className="grid grid-4">
               <StatCard label="Active members" value={r.activeMembers} tone="success" icon={Users} />
-              <StatCard label="Expiring in 7 days" value={r.expiringIn7Days} tone="warning" hint="Reminders go out by email and WhatsApp" />
+              <StatCard label="Expiring in 7 days" value={r.expiringIn7Days} tone="warning" hint="Reminders go out by email" />
               <StatCard label="Expired" value={r.expiredMembers} tone="danger" />
               <StatCard label="Dues collected" value={<Money paise={r.duesCollectedPaise} />} tone="info" hint={`${r.autopayEnabled} on AutoPay`} />
             </div>

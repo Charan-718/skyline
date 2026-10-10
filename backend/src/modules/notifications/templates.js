@@ -10,7 +10,7 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 export const TEMPLATE_SCHEMAS = Object.freeze({
   ANNOUNCEMENT: z.object({ clubName: z.string(), title: z.string(), body: z.string(), category: z.string(), link: url.optional() }).strict(),
   RENEWAL_REMINDER_7D: z
-    .object({ clubName: z.string(), planName: z.string(), expiresOn: date, renewUrl: url, autopayEnabled: z.boolean() })
+    .object({ clubName: z.string(), planName: z.string(), expiresOn: date, renewUrl: url, autopayEnabled: z.boolean(), daysLeft: z.number().int().min(0).optional() })
     .strict(),
   AUTOPAY_RESULT: z
     .object({
@@ -28,16 +28,29 @@ export const TEMPLATE_SCHEMAS = Object.freeze({
 });
 
 export const TEMPLATES = Object.freeze(Object.keys(TEMPLATE_SCHEMAS));
-export const CHANNELS = Object.freeze(['EMAIL', 'WHATSAPP']);
+export const CHANNELS = Object.freeze(['EMAIL']);
 
 const RENDERERS = {
   ANNOUNCEMENT: (p) => ({ subject: `[${p.clubName}] ${p.title}`, text: `${p.body}${p.link ? `\n\n${p.link}` : ''}` }),
-  RENEWAL_REMINDER_7D: (p) => ({
-    subject: `${p.clubName}: your ${p.planName} membership expires on ${p.expiresOn}`,
-    text:
-      `Your ${p.clubName} membership (${p.planName}) expires on ${p.expiresOn}.\n` +
-      (p.autopayEnabled ? `AutoPay (simulated) will attempt renewal on ${p.expiresOn}.\n` : `Renew here: ${p.renewUrl}\n`),
-  }),
+  // Two mails: AutoPay members are told the renewal will happen by itself; everyone else is asked to renew.
+  RENEWAL_REMINDER_7D: (p) => {
+    const when = p.daysLeft === undefined ? `on ${p.expiresOn}` : `in ${p.daysLeft} day${p.daysLeft === 1 ? '' : 's'} (${p.expiresOn})`;
+    if (p.autopayEnabled) {
+      return {
+        subject: `${p.clubName}: AutoPay will renew your membership ${when}`,
+        text:
+          `Your ${p.clubName} membership (${p.planName}) ends ${when}.\n` +
+          `AutoPay is switched on, so your renewal will be triggered automatically on ${p.expiresOn}. You do not need to do anything.\n` +
+          `If you would rather not renew, turn AutoPay off before then: ${p.renewUrl}\n`,
+      };
+    }
+    return {
+      subject: `${p.clubName}: your membership expires ${when}`,
+      text:
+        `Your ${p.clubName} membership (${p.planName}) expires ${when}.\n` +
+        `Renew now to keep your member benefits: ${p.renewUrl}\n`,
+    };
+  },
   AUTOPAY_RESULT: (p) => ({
     subject: `${p.clubName}: AutoPay renewal ${p.outcome.toLowerCase()}`,
     text:
@@ -65,7 +78,7 @@ export function validatePayload(template, payload) {
   return parsed.data;
 }
 
-/** { subject, text } — WhatsApp uses text only. */
+/** { subject, text }. */
 export function render(template, payload) {
   return RENDERERS[template](payload);
 }

@@ -20,15 +20,13 @@ const jobs = {
     let queued = 0;
     db.memberships.filter((m) => m.status === 'ACTIVE' && m.expiresOn > today && m.expiresOn <= in7).forEach((m) => {
       const term = db.terms.find((t) => t.membershipId === m.id && t.status === 'PAID' && t.endsOn === m.expiresOn);
-      ['EMAIL', 'WHATSAPP'].forEach((channel) => {
-        const key = `renewal-reminder:${term?.id}:${channel}`;
-        if (!db.deliveries.some((d) => d.dedupeKey === key)) {
-          enqueue(db, { userId: m.userId, channel, template: 'RENEWAL_REMINDER_7D', payload: { expiresOn: m.expiresOn }, dedupeKey: key });
-          queued += 1;
-        }
-      });
+      const key = `renewal-reminder:${term?.id}:EMAIL`;
+      if (!db.deliveries.some((d) => d.dedupeKey === key)) {
+        enqueue(db, { userId: m.userId, channel: 'EMAIL', template: 'RENEWAL_REMINDER_7D', payload: { expiresOn: m.expiresOn }, dedupeKey: key });
+        queued += 1;
+      }
     });
-    return { queued, note: 'One email and one WhatsApp reminder per term; re-running never duplicates.' };
+    return { queued, note: 'One reminder email per term; re-running never duplicates.' };
   },
   'autopay-renewals': (db, { asOf, autopayOutcome = 'SUCCEEDED' }) => {
     const day = asOf || todayIST();

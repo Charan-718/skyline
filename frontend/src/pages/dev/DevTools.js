@@ -14,7 +14,7 @@ import { formatDateTime, todayInput } from '../../utils/dates';
 import { label } from '../../utils/status';
 
 const JOBS = [
-  { name: 'renewal-reminders', label: '7-day renewal reminders', help: 'Queues one email + one WhatsApp per term expiring within 7 days. Re-running never duplicates.' },
+  { name: 'renewal-reminders', label: '7-day renewal reminders', help: 'Queues one reminder email per term expiring within 7 days. Re-running never duplicates.' },
   { name: 'autopay-renewals', label: 'AutoPay renewals', help: 'Attempts renewal for AutoPay members whose membership expires on the chosen date.' },
   { name: 'membership-expiry', label: 'Membership expiry', help: 'Marks memberships past their expiry date as EXPIRED.' },
 ];
@@ -80,7 +80,7 @@ export default function DevTools() {
           </QueryState>
           <p className="subtle row" style={{ gap: 6, marginTop: 8 }}><Student size={16} aria-hidden /> Use an available ID on Profile → Verify.</p>
         </Card>
-        <Card title="Notification outbox" description="Emails and WhatsApp messages the dev adapters would have sent." className="span-2" actions={<Select aria-label="Channel" value={channel} onChange={(e) => setChannel(e.target.value)} placeholder="All channels" options={[{ value: 'EMAIL', label: 'Email' }, { value: 'WHATSAPP', label: 'WhatsApp' }]} style={{ width: 'auto' }} />} flush>
+        <Card title="Notification outbox" description="Emails the dev adapters would have sent." className="span-2" actions={<Select aria-label="Channel" value={channel} onChange={(e) => setChannel(e.target.value)} placeholder="All channels" options={[{ value: 'EMAIL', label: 'Email' }]} style={{ width: 'auto' }} />} flush>
           <QueryState query={outbox}>
             {(rows) => (
               <div style={{ maxHeight: 420, overflow: 'auto' }}>
