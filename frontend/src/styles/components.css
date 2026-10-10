@@ -1715,9 +1715,37 @@ button.task-card:hover {
   max-width: 460px;
 }
 
+/* Shows three accounts at a time; the rest scroll inside the list. */
 .demo-accounts {
+  --demo-row: 74px;
   display: grid;
+  grid-auto-rows: var(--demo-row);
+  max-height: calc(var(--demo-row) * 3 + 1px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border-top: 1px solid var(--color-border);
+}
+
+/* Always-visible scrollbar (overlay scrollbars on macOS would otherwise hide until scrolled). */
+.demo-accounts::-webkit-scrollbar {
+  width: 10px;
+}
+
+.demo-accounts::-webkit-scrollbar-track {
+  background: var(--color-surface-interactive);
+}
+
+.demo-accounts::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-surface-interactive);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .demo-accounts {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) var(--color-surface-interactive);
+  }
 }
 
 .demo-accounts button {
