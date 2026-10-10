@@ -32,6 +32,20 @@ describe('expense lifecycle (LLD §2.10)', () => {
 });
 
 describe('finance formulas (LLD §2.10) — pure', () => {
+  it('coerces string bigint aggregates from Postgres (no string concat)', () => {
+    const s = summarize({
+      periodByCategory: { IN: { TICKET_SALE: '70000', MEMBERSHIP_DUES: '50000' }, OUT: { DIRECT_EXPENSE: '30000' } },
+      allTimeIn: '22884130',
+      allTimeOut: '3750000',
+      approvedUnpaid: '3750000',
+      pendingReview: '0',
+    });
+    expect(s.totalIncomePaise).toBe(120000);
+    expect(s.totalPaidExpensesPaise).toBe(30000);
+    expect(s.availableBalancePaise).toBe(19134130);
+    expect(s.projectedBalancePaise).toBe(15384130);
+  });
+
   it('pending review is reported but never subtracted; projected = available − approved', () => {
     const s = summarize({
       periodByCategory: { IN: { TICKET_SALE: 1000, FUNDRAISER_INCOME: 500 }, OUT: { DIRECT_EXPENSE: 300 } },

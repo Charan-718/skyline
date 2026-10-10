@@ -15,7 +15,9 @@ export function createFinanceSummaryService({ db, clock, budgets, auth, timeZone
       budgets.activeOn(clubId, clock.todayIST()),
     ]);
     const periodByCategory = { IN: {}, OUT: {} };
-    for (const r of byCategory) periodByCategory[r.direction][r.category] = r.total;
+    for (const r of byCategory) {
+      periodByCategory[r.direction][r.category] = Number(r.total) || 0;
+    }
     return {
       currency: 'INR',
       period: { from: from ?? null, to: to ?? null },
@@ -27,7 +29,11 @@ export function createFinanceSummaryService({ db, clock, budgets, auth, timeZone
         pendingReview: expenses.pending_review,
       }),
       activeBudget: activeBudget ? { id: activeBudget.budget.id, name: activeBudget.budget.name, ...activeBudget.figures } : null,
-      monthly: months.map((m) => ({ month: m.month, inPaise: m.in_paise, outPaise: m.out_paise })),
+      monthly: months.map((m) => ({
+        month: m.month,
+        inPaise: Number(m.in_paise) || 0,
+        outPaise: Number(m.out_paise) || 0,
+      })),
     };
   }
 
