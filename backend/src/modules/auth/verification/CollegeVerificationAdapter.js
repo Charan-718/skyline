@@ -1,8 +1,8 @@
-/** @typedef {{ outcome: 'VERIFIED'|'NOT_VERIFIED'|'UNAVAILABLE', externalReference?: string }} VerificationResult */
+/** @typedef {{ outcome: 'VERIFIED'|'NOT_VERIFIED'|'UNAVAILABLE', externalReference?: string, studentIdentifier?: string }} VerificationResult */
 
 /**
  * @typedef {object} CollegeVerificationAdapter
- * @property {(input: { studentIdentifier: string, fullName: string }) => Promise<VerificationResult>} verify
+ * @property {(input: { studentIdentifier?: string, fullName: string, accountEmail?: string }) => Promise<VerificationResult>} verify
  */
 
 export {};

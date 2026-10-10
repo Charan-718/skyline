@@ -5,6 +5,8 @@ import { config } from '../../config/index.js';
 import { withTransaction } from '../../db/transaction.js';
 import { now } from '../../shared/clock.js';
 import { createAuditService } from '../../shared/audit.js';
+import { isCollegeEmailDomain, resolveAccountAudience } from '../../shared/collegeEmail.js';
+import { isClubHeadIdentityMismatch, isClubHeadRegistrationEmail } from './verification/roster.js';
 
 const BCRYPT_COST = 12;
 
@@ -34,13 +36,100 @@ export function createAuthService({ authRepository, verificationAdapter, clubsMo
     }
   }
 
+  async function callAdapter({ studentIdentifier, fullName, accountEmail }) {
+    return Promise.race([
+      verificationAdapter.verify({ studentIdentifier, fullName, accountEmail }),
+      new Promise((resolve) => setTimeout(() => resolve({ outcome: 'UNAVAILABLE' }), 5000)),
+    ]);
+  }
+
+  function verificationHashKey(studentIdentifier, email) {
+    return studentIdentifier ?? `email:${email.trim().toLowerCase()}`;
+  }
+
+  async function persistVerificationOutcome(userId, studentIdentifier, adapterResult, requestId) {
+    if (adapterResult.outcome === 'UNAVAILABLE') {
+      return null;
+    }
+    try {
+      return await withTransaction(async (trx) => {
+        await authRepository.supersedeCurrentVerification(userId, trx);
+        const row = await authRepository.insertVerification(
+          {
+            user_id: userId,
+            outcome: adapterResult.outcome,
+            student_identifier_hash: hashStudentIdentifier(studentIdentifier),
+            adapter: config.COLLEGE_VERIFICATION_MODE,
+            external_reference: adapterResult.externalReference ?? null,
+            checked_at: now(),
+          },
+          trx,
+        );
+        await audit.record(trx, {
+          actorUserId: userId,
+          action: 'COLLEGE_VERIFICATION',
+          entityType: 'college_verification',
+          entityId: row.id,
+          requestId: requestId ?? null,
+        });
+        return row;
+      });
+    } catch (err) {
+      if (err.code === '23505') {
+        throw new AppError('STUDENT_ID_ALREADY_LINKED', 409, 'Student ID already linked to another account');
+      }
+      throw err;
+    }
+  }
+
   return {
-    async register(dto) {
+    async register(dto, requestId = null) {
       validatePassword(dto.email, dto.password);
       const existing = await authRepository.findUserByEmail(dto.email);
       if (existing) {
         throw new AppError('EMAIL_TAKEN', 409, 'Email already registered');
       }
+      const collegeDomains = config.COLLEGE_EMAIL_DOMAINS;
+      const clubHeadSignup = isClubHeadRegistrationEmail(dto.email);
+
+      if (isClubHeadIdentityMismatch(dto.fullName, dto.email)) {
+        throw new AppError(
+          'CLUB_HEAD_REGISTRATION_DENIED',
+          403,
+          'Club head name and email must match the college database. Registration rejected.',
+        );
+      }
+
+      let adapterResult = null;
+
+      if (isCollegeEmailDomain(dto.email, collegeDomains)) {
+        adapterResult = await callAdapter({
+          studentIdentifier: dto.studentIdentifier,
+          fullName: dto.fullName,
+          accountEmail: dto.email,
+        });
+        if (adapterResult.outcome === 'UNAVAILABLE') {
+          throw new AppError(
+            'VERIFICATION_UNAVAILABLE',
+            503,
+            'College database unavailable; registration with a college email cannot proceed',
+          );
+        }
+        if (adapterResult.outcome !== 'VERIFIED') {
+          const code = clubHeadSignup ? 'CLUB_HEAD_REGISTRATION_DENIED' : 'COLLEGE_REGISTRATION_DENIED';
+          const message = clubHeadSignup
+            ? 'Club head must match the college database (correct email and full name). Registration rejected.'
+            : 'This college email is not in the college database (check email and full name). Registration rejected.';
+          throw new AppError(code, 403, message);
+        }
+      } else if (clubHeadSignup) {
+        throw new AppError(
+          'CLUB_HEAD_REGISTRATION_DENIED',
+          403,
+          'Club head must use the official college email domain and match the college database.',
+        );
+      }
+
       const passwordHash = await bcrypt.hash(dto.password, BCRYPT_COST);
       const user = await authRepository.insertUser(
         {
@@ -52,7 +141,29 @@ export function createAuthService({ authRepository, verificationAdapter, clubsMo
         },
         authRepository.db,
       );
-      return publicUser(user);
+
+      let collegeVerification = null;
+      let verificationOutcome = null;
+
+      if (isCollegeEmailDomain(dto.email, collegeDomains) && adapterResult?.outcome === 'VERIFIED') {
+        const sid =
+          adapterResult.studentIdentifier ??
+          dto.studentIdentifier ??
+          verificationHashKey(null, dto.email);
+        const row = await persistVerificationOutcome(user.id, sid, adapterResult, requestId);
+        verificationOutcome = row?.outcome ?? adapterResult.outcome;
+        collegeVerification = row
+          ? { outcome: row.outcome, checkedAt: row.checkedAt }
+          : { outcome: adapterResult.outcome };
+      }
+
+      const accountAudience = resolveAccountAudience(dto.email, verificationOutcome, collegeDomains);
+
+      return {
+        ...publicUser(user),
+        accountAudience,
+        collegeVerification,
+      };
     },
 
     async login(email, password) {
@@ -76,8 +187,14 @@ export function createAuthService({ authRepository, verificationAdapter, clubsMo
       const capabilities = await clubsModule.getCapabilities(userId);
       const verification = await authRepository.getCurrentVerification(userId);
       const verifiedStudent = verification?.outcome === 'VERIFIED';
+      const accountAudience = resolveAccountAudience(
+        user.email,
+        verification?.outcome ?? null,
+        config.COLLEGE_EMAIL_DOMAINS,
+      );
       return {
         user: publicUser(user),
+        accountAudience,
         capabilities: { ...capabilities, verifiedStudent },
       };
     },
@@ -94,13 +211,12 @@ export function createAuthService({ authRepository, verificationAdapter, clubsMo
         throw new AppError('VERIFICATION_RATE_LIMITED', 429, 'Too many verification attempts');
       }
 
-      const adapterResult = await Promise.race([
-        verificationAdapter.verify({
-          studentIdentifier: dto.studentIdentifier,
-          fullName: dto.fullName,
-        }),
-        new Promise((resolve) => setTimeout(() => resolve({ outcome: 'UNAVAILABLE' }), 5000)),
-      ]);
+      const user = await authRepository.findUserById(userId);
+      const adapterResult = await callAdapter({
+        studentIdentifier: dto.studentIdentifier,
+        fullName: dto.fullName,
+        accountEmail: user?.email ?? undefined,
+      });
 
       if (adapterResult.outcome === 'UNAVAILABLE') {
         await withTransaction(async (trx) => {
@@ -118,35 +234,8 @@ export function createAuthService({ authRepository, verificationAdapter, clubsMo
         throw new AppError('VERIFICATION_UNAVAILABLE', 503, 'Verification service unavailable');
       }
 
-      try {
-        return await withTransaction(async (trx) => {
-          await authRepository.supersedeCurrentVerification(userId, trx);
-          const row = await authRepository.insertVerification(
-            {
-              user_id: userId,
-              outcome: adapterResult.outcome,
-              student_identifier_hash: hashStudentIdentifier(dto.studentIdentifier),
-              adapter: config.COLLEGE_VERIFICATION_MODE,
-              external_reference: adapterResult.externalReference ?? null,
-              checked_at: now(),
-            },
-            trx,
-          );
-          await audit.record(trx, {
-            actorUserId: userId,
-            action: 'COLLEGE_VERIFICATION',
-            entityType: 'college_verification',
-            entityId: row.id,
-            requestId,
-          });
-          return { outcome: row.outcome, checkedAt: row.checkedAt };
-        });
-      } catch (err) {
-        if (err.code === '23505') {
-          throw new AppError('STUDENT_ID_ALREADY_LINKED', 409, 'Student ID already linked to another account');
-        }
-        throw err;
-      }
+      const row = await persistVerificationOutcome(userId, dto.studentIdentifier, adapterResult, requestId);
+      return { outcome: row.outcome, checkedAt: row.checkedAt };
     },
 
     async getCollegeVerificationStatus(userId) {

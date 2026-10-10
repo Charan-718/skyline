@@ -1,4 +1,69 @@
 [
-  { "studentIdentifier": "SRKR2023CS001", "fullName": "Asha Rao" },
-  { "studentIdentifier": "SRKR2022ME042", "fullName": "Ravi Kumar" }
+  {
+    "studentIdentifier": "SKY2023AD001",
+    "fullName": "Club Head User",
+    "collegeEmail": "clubhead@skyline.ac.in",
+    "program": "B.Tech CSE 2023",
+    "clubHeadEligible": true
+  },
+  {
+    "studentIdentifier": "SRKR2023CS001",
+    "fullName": "Asha Rao",
+    "collegeEmail": "asha.rao@skyline.ac.in",
+    "program": "B.Tech CSE 2023"
+  },
+  {
+    "studentIdentifier": "SRKR2022ME042",
+    "fullName": "Ravi Kumar",
+    "collegeEmail": "ravi.kumar@skyline.ac.in",
+    "program": "B.Tech ME 2022"
+  },
+  {
+    "studentIdentifier": "SRKR2024EC015",
+    "fullName": "Priya Nair",
+    "collegeEmail": "priya.nair@skyline.ac.in",
+    "program": "B.Tech ECE 2024"
+  },
+  {
+    "studentIdentifier": "SRKR2023IT088",
+    "fullName": "Arjun Mehta",
+    "collegeEmail": "arjun.mehta@skyline.ac.in",
+    "program": "B.Tech IT 2023"
+  },
+  {
+    "studentIdentifier": "SRKR2021CS210",
+    "fullName": "Sneha Reddy",
+    "collegeEmail": "sneha.reddy@skyline.ac.in",
+    "program": "B.Tech CSE 2021"
+  },
+  {
+    "studentIdentifier": "SRKR2024ME031",
+    "fullName": "Karan Singh",
+    "collegeEmail": "karan.singh@skyline.ac.in",
+    "program": "B.Tech ME 2024"
+  },
+  {
+    "studentIdentifier": "SRKR2023EE056",
+    "fullName": "Divya Iyer",
+    "collegeEmail": "divya.iyer@skyline.ac.in",
+    "program": "B.Tech EEE 2023"
+  },
+  {
+    "studentIdentifier": "SRKR2022CS177",
+    "fullName": "Mohammed Ali",
+    "collegeEmail": "mohammed.ali@skyline.ac.in",
+    "program": "B.Tech CSE 2022"
+  },
+  {
+    "studentIdentifier": "SRKR2024CS009",
+    "fullName": "Ananya Das",
+    "collegeEmail": "ananya.das@skyline.ac.in",
+    "program": "B.Tech CSE 2024"
+  },
+  {
+    "studentIdentifier": "SRKR2023CE044",
+    "fullName": "Vikram Patel",
+    "collegeEmail": "vikram.patel@skyline.ac.in",
+    "program": "B.Tech CE 2023"
+  }
 ]

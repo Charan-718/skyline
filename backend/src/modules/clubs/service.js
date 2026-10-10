@@ -1,8 +1,30 @@
 import { AppError, assertFound } from '../../shared/errors.js';
 import { createAuditService } from '../../shared/audit.js';
+import { isClubHeadRegistrationEmail } from '../auth/verification/roster.js';
 
 export function createClubService({ clubRepository, authRepository, auditRepository, authz }) {
   const audit = createAuditService(auditRepository);
+
+  async function requireVerifiedStudent(userId) {
+    const verification = await authRepository.getCurrentVerification(userId);
+    if (verification?.outcome !== 'VERIFIED') {
+      throw new AppError(
+        'NOT_VERIFIED',
+        403,
+        'Only verified college students can be assigned as club head',
+      );
+    }
+  }
+
+  async function requireClubHeadEligibleUser(user) {
+    if (!isClubHeadRegistrationEmail(user.email)) {
+      throw new AppError(
+        'CLUB_HEAD_NOT_ELIGIBLE',
+        403,
+        'This user is not listed as club-head eligible in the college database',
+      );
+    }
+  }
 
   return {
     getCapabilities: (userId) => authz.getCapabilities(userId),
@@ -46,6 +68,8 @@ export function createClubService({ clubRepository, authRepository, auditReposit
       assertFound(club, 'Club not found');
       const user = await authRepository.findUserByEmail(userEmail);
       if (!user) throw new AppError('USER_NOT_FOUND', 422, 'User not found');
+      await requireVerifiedStudent(user.id);
+      await requireClubHeadEligibleUser(user);
       try {
         return await clubRepository.assignRole(
           {
@@ -73,6 +97,10 @@ export function createClubService({ clubRepository, authRepository, auditReposit
       await authz.requireClubHead(actorUserId, clubId);
       const user = await authRepository.findUserByEmail(dto.userEmail);
       if (!user) throw new AppError('USER_NOT_FOUND', 422, 'User not found');
+      if (dto.role === 'CLUB_HEAD') {
+        await requireVerifiedStudent(user.id);
+        await requireClubHeadEligibleUser(user);
+      }
       try {
         const assignment = await clubRepository.assignRole(
           {

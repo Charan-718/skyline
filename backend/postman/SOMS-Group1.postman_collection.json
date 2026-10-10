@@ -1,0 +1,565 @@
+{
+  "info": {
+    "_postman_id": "soms-group1-collection",
+    "name": "SOMS — Group 1 Engagement API",
+    "description": "Tests implemented `/api/v1` routes (auth, clubs, memberships, payments, events, announcements, event report).\n\n**Before you start**\n1. Postgres + `npm run migrate` + `npm start` (port 4000).\n2. Import **SOMS-Local** environment.\n3. Run folder **0 — Bootstrap** top to bottom (uses session cookies).\n4. **Club bootstrap (ASM-01):** after registering club head, run from `backend/`:\n   `npm run cli -- create-club skyline \"Skyline Association\" SKY`\n   `npm run cli -- assign-club-head <clubId> {{headEmail}}`\n   Then **List clubs** and set `clubId` if not auto-saved.\n5. **Event publish:** organizer API is not wired yet. After **Create event**, run SQL in `setup-organizer.sql` (replace IDs/emails) before **Publish event**.\n\n**Headers on all mutating requests:** `X-Requested-With: soms`, `Idempotency-Key: {{$guid}}` where marked.\n\n**College mock:** `SRKR2023CS001` + `Asha Rao` (see auth fixtures).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000/api/v1" }
+  ],
+  "item": [
+    {
+      "name": "0 — Bootstrap",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health"
+          }
+        },
+        {
+          "name": "Register club head",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 created', () => pm.response.to.have.status(201));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "soms" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{headEmail}}\",\n  \"password\": \"{{password}}\",\n  \"fullName\": \"Club Head User\",\n  \"phoneE164\": \"+919876543210\",\n  \"studentIdentifier\": \"SKY2023AD001\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        },
+        {
+          "name": "Register member (student)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "soms" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{memberEmail}}\",\n  \"password\": \"{{password}}\",\n  \"fullName\": \"Asha Rao\",\n  \"phoneE164\": \"+919876543211\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        },
+        {
+          "name": "Login club head",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 login', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "soms" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{headEmail}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "List clubs (copy clubId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data[0] && j.data[0].id) {",
+                  "  pm.environment.set('clubId', j.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clubs?page=1&pageSize=20"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1 — Auth & profile",
+      "item": [
+        {
+          "name": "GET /auth/me",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/auth/me" }
+        },
+        {
+          "name": "PATCH /me",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "soms" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"Club Head Updated\"\n}" },
+            "url": "{{baseUrl}}/me"
+          }
+        },
+        {
+          "name": "POST /me/college-verification (mock VERIFIED)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "soms" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIdentifier\": \"SRKR2023CS001\",\n  \"fullName\": \"Asha Rao\"\n}"
+            },
+            "url": "{{baseUrl}}/me/college-verification",
+            "description": "Login as member first. Match `students.mock.json` exactly."
+          }
+        },
+        {
+          "name": "GET /me/college-verification",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/me/college-verification" }
+        },
+        {
+          "name": "POST /auth/logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "X-Requested-With", "value": "soms" }],
+            "url": "{{baseUrl}}/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 — Clubs & roles",
+      "item": [
+        {
+          "name": "GET /clubs",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/clubs?q=sky" }
+        },
+        {
+          "name": "GET /clubs/:clubId",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/clubs/{{clubId}}" }
+        },
+        {
+          "name": "GET /clubs/:clubId/roles",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/clubs/{{clubId}}/roles" }
+        },
+        {
+          "name": "POST /clubs/:clubId/roles (assign treasurer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data.id) pm.environment.set('roleAssignmentId', j.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "soms" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userEmail\": \"{{memberEmail}}\",\n  \"role\": \"VOLUNTEER\"\n}"
+            },
+            "url": "{{baseUrl}}/clubs/{{clubId}}/roles"
+          }
+        },
+        {
+          "name": "DELETE /clubs/:clubId/roles/:assignmentId",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "X-Requested-With", "value": "soms" }],
+            "url": "{{baseUrl}}/clubs/{{clubId}}/roles/{{roleAssignmentId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 — Membership plans & join",
+      "item": [
+        {
+          "name": "POST /clubs/:clubId/plans (club head)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data.id) {",
+                  "  pm.environment.set('planId', j.data.id);",
+                  "  if (j.data.feePaise != null) pm.environment.set('expectedFeePaise', String(j.data.feePaise));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "soms" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Annual Member\",\n  \"description\": \"12 month plan\",\n  \"benefitsText\": \"10% off events\",\n  \"feePaise\": 50000,\n  \"durationMonths\": 12,\n  \"eventDiscountBps\": 1000,\n  \"merchDiscountBps\": 0,\n  \"earlyBirdAccess\": true\n}"
+            },
+            "url": "{{baseUrl}}/clubs/{{clubId}}/plans"
+          }
+        },
+        {
+          "name": "GET /clubs/:clubId/plans (verified student)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/clubs/{{clubId}}/plans" }
+        },
+        {
+          "name": "POST /clubs/:clubId/memberships (join)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data.membership) pm.environment.set('membershipId', j.data.membership.id);",
+                  "if (j.data && j.data.payment) pm.environment.set('paymentId', j.data.payment.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "soms" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"expectedFeePaise\": {{expectedFeePaise}}\n}"
+            },
+            "url": "{{baseUrl}}/clubs/{{clubId}}/memberships",
+            "description": "Login as verified student (member) before this call."
+          }
+        },
+        {
+          "name": "GET /me/memberships",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/me/memberships" }
+        },
+        {
+          "name": "GET /me/memberships/:id/digital-id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data.qrPayload) pm.environment.set('membershipQrPayload', j.data.qrPayload);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/memberships/{{membershipId}}/digital-id"
+          }
+        },
+        {
+          "name": "POST digital-id/rotate",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "X-Requested-With", "value": "soms" }],
+            "url": "{{baseUrl}}/me/memberships/{{membershipId}}/digital-id/rotate"
+          }
+        },
+        {
+          "name": "POST /membership-verifications",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "soms" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrPayload\": \"{{membershipQrPayload}}\"\n}"
+            },
+            "url": "{{baseUrl}}/membership-verifications",
+            "description": "Club head / volunteer session."
+          }
+        },
+        {
+          "name": "POST /me/memberships/:id/renewals",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "soms" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"expectedFeePaise\": {{expectedFeePaise}}\n}"
+            },
+            "url": "{{baseUrl}}/me/memberships/{{membershipId}}/renewals"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 — Payments (simulated)",
+      "item": [
+        {
+          "name": "GET /payments/:paymentId",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/payments/{{paymentId}}" }
+        },
+        {
+          "name": "POST /payments/:paymentId/simulate SUCCEEDED",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "soms" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"outcome\": \"SUCCEEDED\"\n}" },
+            "url": "{{baseUrl}}/payments/{{paymentId}}/simulate"
+          }
+        },
+        {
+          "name": "POST simulate FAILED (use fresh payment)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "soms" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"outcome\": \"FAILED\"\n}" },
+            "url": "{{baseUrl}}/payments/{{paymentId}}/simulate"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 — Events & ticketing",
+      "item": [
+        {
+          "name": "POST /clubs/:clubId/events (create DRAFT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data.id) pm.environment.set('eventId', j.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "soms" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Spring Gala\",\n  \"description\": \"Annual event\",\n  \"venue\": \"Main Hall\",\n  \"startsAt\": \"2026-12-01T18:00:00.000Z\",\n  \"endsAt\": \"2026-12-01T22:00:00.000Z\",\n  \"registrationOpensAt\": \"2026-06-01T00:00:00.000Z\",\n  \"registrationClosesAt\": \"2026-11-30T23:59:59.000Z\",\n  \"capacity\": 100,\n  \"memberPricePaise\": 20000,\n  \"nonMemberPricePaise\": 30000,\n  \"memberDiscountEligible\": true\n}"
+            },
+            "url": "{{baseUrl}}/clubs/{{clubId}}/events"
+          }
+        },
+        {
+          "name": "GET /events",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/events" }
+        },
+        {
+          "name": "GET /events/:eventId",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/events/{{eventId}}" }
+        },
+        {
+          "name": "GET /events/:eventId/price-quote",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data.finalPricePaise != null) {",
+                  "  pm.environment.set('expectedFinalPricePaise', String(j.data.finalPricePaise));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/events/{{eventId}}/price-quote"
+          }
+        },
+        {
+          "name": "POST /events/:eventId/publish",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "X-Requested-With", "value": "soms" }],
+            "url": "{{baseUrl}}/events/{{eventId}}/publish",
+            "description": "Requires ≥1 row in `event_organizers` — run setup-organizer.sql first."
+          }
+        },
+        {
+          "name": "POST /events/:eventId/bookings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data.payment) pm.environment.set('paymentId', j.data.payment.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "soms" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expectedFinalPricePaise\": {{expectedFinalPricePaise}}\n}"
+            },
+            "url": "{{baseUrl}}/events/{{eventId}}/bookings"
+          }
+        },
+        {
+          "name": "POST /events/:eventId/check-ins",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "soms" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrPayload\": \"{{ticketQrPayload}}\"\n}"
+            },
+            "url": "{{baseUrl}}/events/{{eventId}}/check-ins",
+            "description": "Set ticketQrPayload from ticket QR after booking settles (GET ticket flow when implemented). Staff/CH session."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6 — Announcements",
+      "item": [
+        {
+          "name": "POST /clubs/:clubId/announcements (draft)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data.id) pm.environment.set('announcementId', j.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Requested-With", "value": "soms" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Club meeting\",\n  \"body\": \"All members please attend.\",\n  \"category\": \"MEETING\",\n  \"audience\": \"MEMBERS\",\n  \"sendEmail\": true\n}"
+            },
+            "url": "{{baseUrl}}/clubs/{{clubId}}/announcements"
+          }
+        },
+        {
+          "name": "GET /announcements",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/announcements" }
+        },
+        {
+          "name": "GET /announcements/:id",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/announcements/{{announcementId}}" }
+        },
+        {
+          "name": "POST /announcements/:id/publish",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Requested-With", "value": "soms" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "url": "{{baseUrl}}/announcements/{{announcementId}}/publish"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7 — Reporting",
+      "item": [
+        {
+          "name": "GET /events/:eventId/report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/events/{{eventId}}/report",
+            "description": "Club head, treasurer, or event organizer."
+          }
+        }
+      ]
+    }
+  ]
+}
