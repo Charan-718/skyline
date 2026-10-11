@@ -52,7 +52,14 @@ describe('fundraiser overview (T-71)', () => {
     expect(d.timeElapsedPct).toBe(52);
     expect(d.health).toBe('OFF_TRACK'); // overdue task
     expect(d.counts).toEqual({ todo: 0, inProgress: 1, done: 1, cancelled: 0, overdue: 1 });
-    expect(d.tasks.find((t) => t.id === overdue.id)).toMatchObject({ overdue: true, assignee: { id: volunteer.id, fullName: 'Vol One' } });
+    expect(d.tasks.find((t) => t.id === overdue.id)).toMatchObject({
+      overdue: true,
+      assigneeUserId: volunteer.id,
+      assigneeName: 'Vol One',
+      assignee: { id: volunteer.id, fullName: 'Vol One' },
+    });
+    expect(d.viewerIsClubHead).toBe(false);
+    expect(d.assignees.length).toBeGreaterThanOrEqual(2);
     expect(d.money).toEqual({ incomePaise: 100000, expensesPaidPaise: 0, netPaise: 100000, goalPct: 33 });
   });
 

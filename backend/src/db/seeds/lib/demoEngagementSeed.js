@@ -738,16 +738,60 @@ async function seedDemoEngagement(knex) {
       created_by: asha.id,
     })
     .returning('*');
-  await knex('fundraiser_tasks').insert({
-    fundraiser_id: winter.id,
-    club_id: sky.id,
-    title: 'Coordinate with NGO for distribution',
-    assignee_user_id: ravi.id,
-    deadline: daysFromNow(10, 17),
-    status: 'IN_PROGRESS',
-    progress_percent: 60,
-    created_by: asha.id,
-  });
+  await knex('fundraiser_tasks').insert([
+    {
+      fundraiser_id: winter.id,
+      club_id: sky.id,
+      title: 'Design collection posters',
+      assignee_user_id: meera.id,
+      deadline: daysFromNow(-12, 17),
+      status: 'DONE',
+      progress_percent: 100,
+      completed_at: daysFromNow(-13, 15),
+      created_by: asha.id,
+    },
+    {
+      fundraiser_id: winter.id,
+      club_id: sky.id,
+      title: 'Set up drop boxes in hostels',
+      assignee_user_id: others[0].id,
+      deadline: daysFromNow(-5, 17),
+      status: 'DONE',
+      progress_percent: 100,
+      completed_at: daysFromNow(-6, 15),
+      created_by: asha.id,
+    },
+    {
+      fundraiser_id: winter.id,
+      club_id: sky.id,
+      title: 'Coordinate with NGO for distribution',
+      assignee_user_id: ravi.id,
+      deadline: daysFromNow(10, 17),
+      status: 'IN_PROGRESS',
+      progress_percent: 60,
+      created_by: asha.id,
+    },
+    {
+      fundraiser_id: winter.id,
+      club_id: sky.id,
+      title: 'Sort and pack donations',
+      assignee_user_id: meera.id,
+      deadline: daysFromNow(18, 17),
+      status: 'IN_PROGRESS',
+      progress_percent: 35,
+      created_by: asha.id,
+    },
+    {
+      fundraiser_id: winter.id,
+      club_id: sky.id,
+      title: 'Arrange transport (2 vans)',
+      assignee_user_id: others[1].id,
+      deadline: daysFromNow(20, 17),
+      status: 'TODO',
+      progress_percent: 0,
+      created_by: asha.id,
+    },
+  ]);
 
   const semStart = todayIST();
   await knex('budgets').insert({

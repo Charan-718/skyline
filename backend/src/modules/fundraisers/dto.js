@@ -41,13 +41,16 @@ export function toFundraiserListItem(f, { progress, money }) {
 }
 
 export function toTaskDto(t, names = new Map(), { overdue } = {}) {
+  const assigneeName = t.assignee_user_id ? names.get(t.assignee_user_id) ?? null : null;
   return {
     id: t.id,
     fundraiserId: t.fundraiser_id,
     clubId: t.club_id,
     title: t.title,
     description: t.description,
-    assignee: t.assignee_user_id ? { id: t.assignee_user_id, fullName: names.get(t.assignee_user_id) ?? null } : null,
+    assigneeUserId: t.assignee_user_id ?? null,
+    assigneeName,
+    assignee: t.assignee_user_id ? { id: t.assignee_user_id, fullName: assigneeName } : null,
     deadline: iso(t.deadline),
     status: t.status,
     progressPercent: t.progress_percent,
