@@ -47,7 +47,7 @@ export const routes = [
       .filter((a) => a.clubId === params.clubId && canSee(db, user, a) && (!query.status || a.status === query.status))
       .sort((a, b) => ((a.publishedAt || a.createdAt) < (b.publishedAt || b.createdAt) ? 1 : -1))
       .map((a) => view(db, a));
-    return ok(rows);
+    return paged(paginate(rows, query));
   }],
   ['GET', '/announcements/:id', ({ db, user, params }) => {
     const a = db.announcements.find((x) => x.id === params.id);

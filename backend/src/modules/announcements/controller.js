@@ -21,8 +21,12 @@ export function createAnnouncementController({ announcementService }) {
     },
 
     async clubList(req, res) {
-      const rows = await announcementService.listForClub({ userId: req.userId }, req.params.clubId, req.query);
-      res.json({ data: rows });
+      const page = await announcementService.listForClub(
+        { userId: req.userId },
+        req.valid.params.clubId,
+        req.valid.query,
+      );
+      res.json(page);
     },
 
     async update(req, res) {

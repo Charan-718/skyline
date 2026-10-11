@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { paginationQuery } from '../../shared/pagination.js';
 
 export const clubIdParam = z.object({ clubId: z.string().uuid() });
 export const announcementIdParam = z.object({ id: z.string().uuid() });
@@ -17,3 +18,10 @@ export const updateAnnouncementBody = createAnnouncementBody.partial();
 export const deliveriesQuery = z.object({
   status: z.string().optional(),
 });
+
+export const clubAnnouncementsQuery = z
+  .object({
+    status: z.enum(['DRAFT', 'PUBLISHED']).optional(),
+    ...paginationQuery,
+  })
+  .strict();

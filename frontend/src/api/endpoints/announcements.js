@@ -2,7 +2,7 @@ import { api } from '../client';
 
 export const announcementsApi = {
   feed: (query) => api.getPage('/announcements', query),
-  clubList: (clubId, query) => api.get(`/clubs/${clubId}/announcements`, query),
+  clubList: (clubId, query) => api.getPage(`/clubs/${clubId}/announcements`, query),
   get: (id) => api.get(`/announcements/${id}`),
   create: (clubId, body) => api.post(`/clubs/${clubId}/announcements`, body),
   update: (id, body) => api.patch(`/announcements/${id}`, body),

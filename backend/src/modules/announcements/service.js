@@ -119,10 +119,15 @@ export function createAnnouncementService({
       if (actor?.userId) {
         await authz.requireClubHead(actor.userId, clubId);
       }
-      let rows = await announcementRepository.listForClub(clubId);
-      if (query.status) rows = rows.filter((a) => a.status === query.status);
+      const { page, pageSize, offset } = parsePagination(query, { page: 1, pageSize: 10, maxPageSize: 50 });
+      const { rows, total } = await announcementRepository.listForClub(clubId, {
+        status: query.status,
+        offset,
+        limit: pageSize,
+      });
       const countsById = await deliveryCountsFor(rows.map((a) => a.id));
-      return rows.map((a) => withDeliveryCounts(a, countsById));
+      const data = rows.map((a) => withDeliveryCounts(a, countsById));
+      return paginatedResponse(data, page, pageSize, total);
     },
 
     async updateDraft(actor, id, dto) {
