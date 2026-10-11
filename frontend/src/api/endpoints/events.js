@@ -26,4 +26,7 @@ export const eventsApi = {
   report: (eventId) => api.get(`/events/${eventId}/report`),
   assistant: (eventId) => api.get(`/events/${eventId}/assistant`),
   askAssistant: (eventId, body) => api.post(`/events/${eventId}/assistant`, body),
+  agentStatus: () => api.get('/event-agent'),
+  agentCreateTurn: (clubId, body) => api.post(`/clubs/${clubId}/events/agent`, body),
+  agentEditTurn: (eventId, body) => api.post(`/events/${eventId}/agent`, body),
 };
