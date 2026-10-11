@@ -233,6 +233,11 @@ export function createSeed() {
   const apparel = cat(sky, 'Apparel');
   const accessories = cat(sky, 'Accessories');
   const roboKits = cat(robo, 'Kits');
+  const roboBoards = cat(robo, 'Boards & sensors');
+  const roboPower = cat(robo, 'Motors, power & wiring');
+  const photoGear = cat(photo, 'Cameras & lenses');
+  const photoLight = cat(photo, 'Lighting & audio');
+  const photoAcc = cat(photo, 'Accessories');
   const mkProduct = (club, category, p, sizes) => {
     const product = { id: uid('prd'), clubId: club.id, categoryId: category.id, status: 'ACTIVE', memberDiscountEligible: true, availableToNonMembers: true, offerPricePaise: null, offerStartsAt: null, offerEndsAt: null, createdAt: daysFromNow(-90), ...p };
     db.products.push(product);
@@ -250,7 +255,31 @@ export function createSeed() {
   mkProduct(sky, accessories, { name: 'Club Pen', description: 'Metal ballpoint with a soft grip and printed logo.', pricePaise: 4900, memberDiscountEligible: false, imageUrl: '/merch/pen.webp' }, [['ONE_SIZE', 80, 10]]);
   mkProduct(sky, accessories, { name: '32 GB USB Drive', description: 'Capped USB 3.0 drive, preloaded with the club handbook.', pricePaise: 34900, imageUrl: '/merch/usb.webp' }, [['ONE_SIZE', 20, 4]]);
   mkProduct(sky, accessories, { name: 'Desk Flag', description: 'Mini desk flag with stand for your study table.', pricePaise: 14900, imageUrl: '/merch/flag.webp' }, [['ONE_SIZE', 15, 3]]);
-  mkProduct(robo, roboKits, { name: 'Line Follower Starter Kit', description: 'Chassis, motors, sensor array and driver board.', pricePaise: 149900 }, [['ONE_SIZE', 12, 3]]);
+  // Photography Society gear, cut from one studio flat-lay; imageBg matches the photo's backdrop.
+  const PHOTO_BACKDROP = '#292728';
+  mkProduct(photo, photoGear, { name: 'Mirrorless Camera Kit', description: 'Micro Four Thirds body with a 12–35mm f/2.8 zoom and hood. Ideal first serious camera.', pricePaise: 8999900, imageUrl: '/merch/photo/camera.webp', imageBg: PHOTO_BACKDROP }, [['ONE_SIZE', 3, 1]]);
+  mkProduct(photo, photoGear, { name: '12–60mm f/2.8–4 Zoom Lens', description: 'Weather-sealed everyday zoom, wide to short telephoto.', pricePaise: 4499900, imageUrl: '/merch/photo/zoom-lens.webp', imageBg: PHOTO_BACKDROP }, [['ONE_SIZE', 4, 1]]);
+  mkProduct(photo, photoGear, { name: '12–35mm f/2.8 Standard Zoom', description: 'Constant f/2.8 zoom with Power O.I.S., great for events and low light.', pricePaise: 3299900, imageUrl: '/merch/photo/standard-lens.webp', imageBg: PHOTO_BACKDROP }, [['ONE_SIZE', 4, 1]]);
+  mkProduct(photo, photoLight, { name: 'Speedlight Flash with Stand', description: 'TTL flash with a cold-shoe stand and umbrella bracket.', pricePaise: 1249900, imageUrl: '/merch/photo/flash.webp', imageBg: PHOTO_BACKDROP }, [['ONE_SIZE', 6, 2]]);
+  mkProduct(photo, photoLight, { name: 'Wireless Flash Trigger', description: '2.4 GHz TTL trigger for off-camera flash, up to 100 m.', pricePaise: 449900, imageUrl: '/merch/photo/trigger.webp', imageBg: PHOTO_BACKDROP }, [['ONE_SIZE', 8, 2]]);
+  mkProduct(photo, photoLight, { name: 'On-camera Stereo Mic', description: 'Compact stereo mic with a furry windshield for clean outdoor audio.', pricePaise: 799900, imageUrl: '/merch/photo/mic.webp', imageBg: PHOTO_BACKDROP }, [['ONE_SIZE', 6, 2]]);
+  mkProduct(photo, photoAcc, { name: 'Travel Tripod', description: 'Aluminium tripod with ball head and quick-release; packs down for photo walks.', pricePaise: 549900, offerPricePaise: 449900, offerStartsAt: daysFromNow(-2), offerEndsAt: daysFromNow(6), imageUrl: '/merch/photo/tripod.webp', imageBg: PHOTO_BACKDROP }, [['ONE_SIZE', 10, 3]]);
+  mkProduct(photo, photoAcc, { name: 'ND & UV Filter Set', description: 'Three 58 mm screw-in filters: ND8, ND64 and a clear UV protector.', pricePaise: 199900, imageUrl: '/merch/photo/filters.webp', imageBg: PHOTO_BACKDROP }, [['ONE_SIZE', 15, 4]]);
+  mkProduct(photo, photoAcc, { name: 'Bayonet Lens Hood', description: 'Cuts flare and protects the front element. Fits 58 mm lenses.', pricePaise: 59900, imageUrl: '/merch/photo/lens-hood.webp', imageBg: PHOTO_BACKDROP }, [['ONE_SIZE', 20, 5]]);
+  mkProduct(photo, photoAcc, { name: 'Padded Camera Strap', description: 'Wide padded neck strap with quick-release ends.', pricePaise: 89900, imageUrl: '/merch/photo/strap.webp', imageBg: PHOTO_BACKDROP }, [['ONE_SIZE', 25, 5]]);
+  mkProduct(photo, photoAcc, { name: '32 GB SD Cards (2-pack)', description: 'UHS-I U3 cards in a hard case, fast enough for 4K video.', pricePaise: 129900, imageUrl: '/merch/photo/sd-cards.webp', imageBg: PHOTO_BACKDROP }, [['ONE_SIZE', 30, 6]]);
+  mkProduct(photo, photoAcc, { name: 'Quick-release Plate', description: 'Arca-style plate with a 1/4-inch screw for most tripod heads.', pricePaise: 39900, imageUrl: '/merch/photo/qr-plate.webp', imageBg: PHOTO_BACKDROP }, [['ONE_SIZE', 20, 5]]);
+  mkProduct(photo, photoAcc, { name: 'Spare Battery Pack (×3)', description: 'Three 2200 mAh batteries for a full day of shooting.', pricePaise: 349900, imageUrl: '/merch/photo/batteries.webp', imageBg: PHOTO_BACKDROP }, [['ONE_SIZE', 12, 3]]);
+  // Robotics Club parts, cut from one flat-lay; imageBg matches the photo's backdrop.
+  const ROBO_BACKDROP = '#e8e7ed';
+  mkProduct(robo, roboKits, { name: 'Line Follower Starter Kit', description: 'Everything pictured: Uno board, L298N driver, 2WD chassis, two gear motors, two IR sensors, 18650 cells with holder and jumper wires.', pricePaise: 149900, imageUrl: '/merch/robotics/kit.webp', imageBg: ROBO_BACKDROP }, [['ONE_SIZE', 12, 3]]);
+  mkProduct(robo, roboKits, { name: '2WD Robot Chassis', description: 'Two-deck acrylic chassis with wheels, mounted gear motors and a ball caster.', pricePaise: 89900, imageUrl: '/merch/robotics/chassis.webp', imageBg: ROBO_BACKDROP }, [['ONE_SIZE', 15, 4]]);
+  mkProduct(robo, roboBoards, { name: 'Uno R3 Board', description: 'ATmega328P microcontroller board with USB cable. The brain of most club builds.', pricePaise: 74900, imageUrl: '/merch/robotics/arduino.webp', imageBg: ROBO_BACKDROP }, [['ONE_SIZE', 20, 5]]);
+  mkProduct(robo, roboBoards, { name: 'L298N Motor Driver', description: 'Dual H-bridge driver with heatsink; runs two DC motors up to 2 A each.', pricePaise: 24900, imageUrl: '/merch/robotics/motor-driver.webp', imageBg: ROBO_BACKDROP }, [['ONE_SIZE', 25, 5]]);
+  mkProduct(robo, roboBoards, { name: 'IR Line Sensor (2-pack)', description: 'Reflective IR sensors with adjustable threshold for line following and edge detection.', pricePaise: 19900, imageUrl: '/merch/robotics/ir-sensors.webp', imageBg: ROBO_BACKDROP }, [['ONE_SIZE', 40, 8]]);
+  mkProduct(robo, roboPower, { name: 'BO Gear Motors (pair)', description: '3–6 V geared DC motors with double shafts, about 200 RPM.', pricePaise: 24900, imageUrl: '/merch/robotics/gear-motors.webp', imageBg: ROBO_BACKDROP }, [['ONE_SIZE', 30, 6]]);
+  mkProduct(robo, roboPower, { name: '18650 Cells with Holder', description: 'Two 2600 mAh Li-ion cells and a 4-slot holder with leads.', pricePaise: 69900, imageUrl: '/merch/robotics/batteries.webp', imageBg: ROBO_BACKDROP }, [['ONE_SIZE', 18, 4]]);
+  mkProduct(robo, roboPower, { name: 'Jumper Wire Set', description: '40 male-to-male and male-to-female jumpers for breadboard wiring.', pricePaise: 9900, imageUrl: '/merch/robotics/jumper-wires.webp', imageBg: ROBO_BACKDROP }, [['ONE_SIZE', 60, 10]]);
 
   const variantsOf = (p) => db.variants.filter((v) => v.productId === p.id);
   const merchQuote = (product, user) => {

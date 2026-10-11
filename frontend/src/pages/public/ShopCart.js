@@ -36,9 +36,7 @@ function CartPanel({ clubId, cart, setCart }) {
     queryKey: ["products", clubId, !!user],
     queryFn: () => merchApi.products(clubId),
   });
-  const imageFor = (variantId) =>
-    products.data?.find((p) => p.variants.some((v) => v.id === variantId))
-      ?.imageUrl;
+  const productFor = (variantId) => products.data?.find((p) => p.variants.some((v) => v.id === variantId));
   const quote = useQuery({
     queryKey: ["merch-quote", clubId, items],
     queryFn: () => merchApi.quote(clubId, items),
@@ -95,14 +93,15 @@ function CartPanel({ clubId, cart, setCart }) {
               const line = quote.data?.lines.find(
                 (l) => l.variantId === c.variantId,
               );
-              const image = imageFor(c.variantId);
+              const product = productFor(c.variantId);
+              const image = product?.imageUrl;
               return (
                 <li
                   key={c.variantId}
                   style={{ paddingInline: 0 }}
                   className="cart-line"
                 >
-                  <div className="cart-thumb" aria-hidden>
+                  <div className="cart-thumb" aria-hidden style={product?.imageBg ? { background: product.imageBg } : undefined}>
                     {image ? (
                       <img src={`${process.env.PUBLIC_URL}${image}`} alt="" />
                     ) : (

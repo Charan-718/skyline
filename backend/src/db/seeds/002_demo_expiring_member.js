@@ -49,11 +49,14 @@ export async function seed(knex) {
   const autopayUser = await ensureUser(knex, autopayEmail, 'Demo AutoPay Member');
   const later = await ensureUser(knex, 'demo.later@example.test', 'Demo Later Member');
 
+  // Kept inactive so it stays out of the public clubs list; the reminder job doesn't filter on it.
   let club = await knex('clubs').where({ slug: SLUG }).first();
   if (!club) {
     [club] = await knex('clubs')
-      .insert({ slug: SLUG, name: 'Skyline Demo Club', description: 'Demo club for reminders', member_number_prefix: 'DEM', is_active: true })
+      .insert({ slug: SLUG, name: 'Skyline Demo Club', description: 'Demo club for reminders', member_number_prefix: 'DEM', is_active: false })
       .returning('*');
+  } else if (club.is_active) {
+    await knex('clubs').where({ id: club.id }).update({ is_active: false });
   }
   let plan = await knex('membership_plans').where({ club_id: club.id, status: 'ACTIVE' }).first();
   if (!plan) {

@@ -29,7 +29,7 @@ function ProductCard({ product, onAdd, signedIn }) {
   const blocked = !price.eligible;
   return (
     <article className="card" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <div className="product-art">
+      <div className={`product-art${product.imageBg ? ' product-art-photo' : ''}`} style={product.imageBg ? { background: product.imageBg } : undefined}>
         {product.imageUrl ? <img src={`${process.env.PUBLIC_URL}${product.imageUrl}`} alt="" loading="lazy" decoding="async" /> : <TShirt size={56} weight="duotone" aria-hidden />}
       </div>
       <div className="card-body stack" style={{ flex: 1 }}>
