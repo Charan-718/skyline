@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../api/endpoints';
-import { onUnauthorized } from '../api/client';
+import { hasSessionHint, onUnauthorized } from '../api/client';
 
 const AuthContext = createContext(null);
 
@@ -13,7 +13,8 @@ export function AuthProvider({ children }) {
   const qc = useQueryClient();
   const me = useQuery({
     queryKey: ['me'],
-    queryFn: () => authApi.me().catch((e) => (e.code === 'UNAUTHENTICATED' ? null : Promise.reject(e))),
+    // No session hint means nobody has signed in here, so skip the request (and its 401).
+    queryFn: () => (hasSessionHint() ? authApi.me().catch((e) => (e.code === 'UNAUTHENTICATED' ? null : Promise.reject(e))) : null),
     staleTime: 60000,
     retry: false,
   });

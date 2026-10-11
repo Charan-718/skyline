@@ -13,6 +13,26 @@ export class ApiError extends Error {
   }
 }
 
+/*
+ * Session hint: the session cookie is HttpOnly, so remember in localStorage whether this browser
+ * last had a signed-in session. Anonymous visitors then skip GET /auth/me instead of logging a 401.
+ */
+const SESSION_HINT_KEY = 'campusflow.session';
+function setSessionHint(on) {
+  try {
+    window.localStorage.setItem(SESSION_HINT_KEY, on ? '1' : '0');
+  } catch {
+    /* ignore */
+  }
+}
+export function hasSessionHint() {
+  try {
+    return window.localStorage.getItem(SESSION_HINT_KEY) === '1';
+  } catch {
+    return true; // storage unavailable: fall back to asking the server
+  }
+}
+
 let unauthorizedHandler = null;
 export function onUnauthorized(fn) {
   unauthorizedHandler = fn;
@@ -97,15 +117,17 @@ export async function request(method, path, { query, body, idempotencyKey } = {}
   const res = await transport({ method, path, query, body, headers });
 
   if (res.status >= 200 && res.status < 300) {
-    if (path === '/auth/me' || path === '/auth/login') {
+    if (path === '/auth/me' || path === '/auth/login' || path === '/auth/register') {
       const u = res.body?.data?.user || res.body?.user;
       if (u && typeof window !== 'undefined') {
         window.__CURRENT_USER__ = u;
+        setSessionHint(true);
       }
     } else if (path === '/auth/logout') {
       if (typeof window !== 'undefined') {
         window.__CURRENT_USER__ = null;
       }
+      setSessionHint(false);
     }
     return res.body;
   }
@@ -118,7 +140,10 @@ export async function request(method, path, { query, body, idempotencyKey } = {}
     details: err.details,
     requestId: err.requestId || res.requestId,
   });
-  if (res.status === 401 && unauthorizedHandler) unauthorizedHandler(apiError);
+  if (res.status === 401) {
+    setSessionHint(false);
+    if (unauthorizedHandler) unauthorizedHandler(apiError);
+  }
   throw apiError;
 }
 

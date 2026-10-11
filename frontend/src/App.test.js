@@ -14,6 +14,8 @@ let ids = {};
 
 beforeAll(async () => {
   window.localStorage.clear();
+  // Sign-ins below go straight to the mock server, so mark the browser as having a session.
+  window.localStorage.setItem('campusflow.session', '1');
   resetDemo();
   await call('POST', '/auth/login', { email: 'asha@skyline.ac.in', password: 'demo1234' });
   const clubs = (await call('GET', '/clubs')).body.data;

@@ -91,7 +91,7 @@ export default function Splash() {
             <span key={i} className={`splash-block splash-${tone}`} style={{ left: pct(left), top: pct(top), width: pct(width), height: pct(height), '--dur': `${5 + (i % 4)}s`, '--delay': `${-i * 0.7}s`, '--dx': `${(i % 2 ? -1 : 1) * (4 + (i % 3) * 2)}px`, '--dy': `${(i % 3 === 0 ? -1 : 1) * (4 + (i % 4) * 2)}px`, '--rot': `${(i % 2 ? -1 : 1) * (0.3 + (i % 3) * 0.2)}deg` }} />
           ))}
           <img className="splash-reflection" src={campus} alt="" />
-          <img className="splash-campus" src={campus} alt="" width="1600" height="641" decoding="async" fetchpriority="high" />
+          <img className="splash-campus" src={campus} alt="" width="1600" height="641" decoding="async" fetchPriority="high" />
           {LINES.map(([axis, left, top, len], i) => (
             <span key={i} className={`splash-line splash-line-${axis}`} style={{ left: pct(left), top: pct(top), [axis === 'v' ? 'height' : 'width']: pct(len) }} />
           ))}
