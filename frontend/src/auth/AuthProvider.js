@@ -19,19 +19,35 @@ export function AuthProvider({ children }) {
     retry: false,
   });
 
-  useEffect(() => {
-    onUnauthorized(() => qc.setQueryData(['me'], null));
+  // Drop every cached query except the session itself, then mark the visitor as signed out.
+  // Private data must never outlive the session that fetched it.
+  const resetSession = useCallback(() => {
+    qc.removeQueries({ predicate: (query) => query.queryKey[0] !== 'me' });
+    qc.setQueryData(['me'], null);
   }, [qc]);
+
+  useEffect(() => {
+    onUnauthorized(() => resetSession());
+  }, [resetSession]);
+
+  // Back/forward cache: a page restored from it may still show the previous user. Reload so the
+  // session is checked again (a signed-out visitor is sent to the sign-in page).
+  useEffect(() => {
+    const onPageShow = (event) => {
+      if (event.persisted) window.location.reload();
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, []);
 
   const refresh = useCallback(() => qc.invalidateQueries({ queryKey: ['me'] }), [qc]);
   const signOut = useCallback(async () => {
     try {
       await authApi.logout();
     } finally {
-      qc.setQueryData(['me'], null);
-      qc.removeQueries({ predicate: (query) => query.queryKey[0] !== 'me' });
+      resetSession();
     }
-  }, [qc]);
+  }, [resetSession]);
 
   const value = useMemo(() => {
     const data = me.data;
@@ -44,7 +60,11 @@ export function AuthProvider({ children }) {
       capabilities: caps || null,
       refresh,
       signOut,
-      setSession: (payload) => qc.setQueryData(['me'], payload),
+      // A new sign-in starts from an empty cache, so the previous user's data is never shown.
+      setSession: (payload) => {
+        resetSession();
+        qc.setQueryData(['me'], payload);
+      },
       rolesIn,
       hasRole: (clubId, ...roles) => rolesIn(clubId).some((r) => roles.includes(r)),
       isVerified: !!caps?.verifiedStudent,
@@ -53,7 +73,7 @@ export function AuthProvider({ children }) {
       organizerOf: caps?.organizerOf || [],
       staffOf: caps?.staffOf || [],
     };
-  }, [me.data, me.isPending, me.error, refresh, signOut, qc]);
+  }, [me.data, me.isPending, me.error, refresh, signOut, resetSession, qc]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

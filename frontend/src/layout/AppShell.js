@@ -230,7 +230,7 @@ function UserMenu() {
             onClick={async () => {
               setOpen(false);
               await signOut();
-              navigate('/home');
+              navigate('/login', { replace: true });
             }}
           >
             <SignOut size={18} aria-hidden /> Sign out
