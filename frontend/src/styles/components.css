@@ -2600,3 +2600,131 @@ button.task-card:hover {
     animation: none;
   }
 }
+
+/* ═════════════ Event assistant (floating chat) ═════════════ */
+.assistant-launcher {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: var(--z-sticky);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+}
+.assistant-launcher:hover { background: var(--color-primary-hover); }
+.assistant-launcher:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+.assistant-panel {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-lg);
+}
+@media (min-width: 640px) {
+  .assistant-panel {
+    inset: auto var(--space-4) var(--space-4) auto;
+    width: 380px;
+    height: min(600px, calc(100vh - 2 * var(--space-4)));
+    border-radius: var(--radius-lg);
+  }
+}
+
+.assistant-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.assistant-title { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.assistant-title > div { display: flex; flex-direction: column; min-width: 0; }
+.assistant-sub {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assistant-messages {
+  flex: 1;
+  min-height: 160px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+.assistant-empty { color: var(--color-text-secondary); margin: 0; }
+.assistant-msg {
+  max-width: 85%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+.assistant-msg-user { align-self: flex-end; background: var(--color-primary); color: var(--color-on-primary); }
+.assistant-msg-assistant { align-self: flex-start; background: var(--color-surface-muted); }
+.assistant-msg-error { align-self: flex-start; background: var(--color-error-soft); color: var(--color-error); }
+
+.assistant-typing { display: inline-flex; gap: 4px; padding: var(--space-3); }
+.assistant-typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  animation: assistant-dot 1s infinite ease-in-out;
+}
+.assistant-typing span:nth-child(2) { animation-delay: 0.15s; }
+.assistant-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes assistant-dot { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .assistant-typing span { animation: none; } }
+
+.assistant-chips {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--color-border-subtle);
+}
+.assistant-chip {
+  flex: none;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+.assistant-chip:hover:not(:disabled) { background: var(--color-surface-interactive); }
+.assistant-chip:disabled { opacity: 0.5; cursor: default; }
+
+.assistant-input { display: flex; gap: var(--space-2); padding: var(--space-2) var(--space-4) 0; }
+.assistant-input .input { flex: 1; min-width: 0; }
+.assistant-note, .assistant-disclaimer {
+  margin: 0;
+  padding: var(--space-2) var(--space-4) 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+.assistant-disclaimer { padding-bottom: var(--space-3); font-size: var(--font-size-xs); }

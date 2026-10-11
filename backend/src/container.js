@@ -64,6 +64,7 @@ import {
   createAnnouncementRoutes,
 } from './modules/announcements/index.js';
 
+import { createAssistantModule } from './modules/assistant/index.js';
 import { createEventReportService, createGroup1ReportingRoutes } from './modules/reporting/index.js';
 
 import { createMembershipExpiryJob } from './jobs/definitions/membershipExpiry.js';
@@ -72,7 +73,8 @@ import { createAutopayRenewalsJob } from './jobs/definitions/autopayRenewals.js'
 import { createReservationExpiryJob } from './jobs/definitions/reservationExpiry.js';
 import { createJobDevRoutes } from './jobs/devRoutes.js';
 
-export function createContainer() {
+/** options.assistantGemini: test seam replacing the Gemini client (null = no key configured). */
+export function createContainer(options = {}) {
   const auditRepository = createAuditRepository(db);
   const authz = createClubAuthz({ db });
 
@@ -202,6 +204,7 @@ export function createContainer() {
     memberships: createMembershipRoutes({ membershipController, authz }),
     events: createEventRoutes({ eventController, authz }),
     announcements: createAnnouncementRoutes({ announcementController, authz }),
+    assistant: createAssistantModule({ db, eventService, config, logger, gemini: options.assistantGemini }).routes,
     reporting: createGroup1ReportingRoutes({ db, eventReportService, authz, eventRepository }),
   };
 

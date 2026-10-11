@@ -24,4 +24,6 @@ export const eventsApi = {
     api.post(`/events/${eventId}/check-ins`, { qrPayload }, { idempotencyKey }),
   checkIns: (eventId) => api.get(`/events/${eventId}/check-ins`),
   report: (eventId) => api.get(`/events/${eventId}/report`),
+  assistant: (eventId) => api.get(`/events/${eventId}/assistant`),
+  askAssistant: (eventId, body) => api.post(`/events/${eventId}/assistant`, body),
 };
