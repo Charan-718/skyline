@@ -18,6 +18,7 @@ import { formatDate, formatDateTime, formatTime } from '../../utils/dates';
 import { formatMoney, formatPercent } from '../../utils/money';
 import { label, LABELS } from '../../utils/status';
 import { EventForm } from './EventForm';
+import { AgentChat, useAgentAvailable, useAgentConversation } from './EventAgent';
 
 function Overview({ event }) {
   const report = useQuery({ queryKey: ['event-report', event.id], queryFn: () => eventsApi.report(event.id) });
@@ -181,12 +182,66 @@ function Team({ event, isHead }) {
   );
 }
 
+const EDIT_EXAMPLES = ['Make it members only', 'Start an hour later', 'Raise the non-member price by ₹20'];
+
+/** Edit by prompt: the agent proposes a patch; nothing changes until Apply (PATCH /events/:id). */
+function AgentEdit({ event, isHead, onDone }) {
+  const toast = useToast();
+  const convo = useAgentConversation((body) => eventsApi.agentEditTurn(event.id, body), 'edit');
+  const last = convo.last;
+  const ready = last?.status === 'READY';
+  const wantsPublish = ready && last.publishRequested && event.status === 'DRAFT';
+  const apply = useMutation({
+    mutationFn: async () => {
+      if (Object.keys(convo.value).length) await eventsApi.update(event.id, convo.value);
+      if (wantsPublish) await eventsApi.publish(event.id);
+    },
+    onSuccess: () => {
+      toast.success(wantsPublish ? 'Event updated and published' : 'Event updated');
+      convo.reset();
+      onDone();
+    },
+    onError: (e) => toast.error(e),
+  });
+  return (
+    <Card title="Edit with the AI agent" description={isHead ? 'Say what to change, e.g. a new price or time. You see every change before it is applied.' : 'As an organizer you can change the description and venue.'}>
+      <div className="stack">
+        <AgentChat convo={convo} examples={isHead ? EDIT_EXAMPLES : ['Move it to Hall 3']} placeholder="What should change?" />
+        {ready && (
+          <div className="stack-sm agent-commit">
+            {last.changes.length > 0 && (
+              <table className="agent-changes">
+                <thead>
+                  <tr><th scope="col">Field</th><th scope="col">Now</th><th scope="col">After</th></tr>
+                </thead>
+                <tbody>
+                  {last.changes.map((c) => (
+                    <tr key={c.field}><th scope="row">{c.label}</th><td>{c.before}</td><td><strong>{c.after}</strong></td></tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {wantsPublish && last.needsOrganizer && <Alert tone="warning">Assign an organizer in the Team tab before publishing.</Alert>}
+            <div className="actions" style={{ justifyContent: 'flex-end' }}>
+              <Button onClick={() => convo.reset()}>Discard</Button>
+              <Button variant="primary" loading={apply.isPending} disabled={wantsPublish && last.needsOrganizer} onClick={() => apply.mutate()}>
+                {wantsPublish ? (last.changes.length ? 'Apply and publish' : 'Publish') : 'Apply changes'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 export default function EventManage() {
   const { eventId } = useParams();
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') || 'overview';
   const setTab = (t) => setParams({ tab: t }, { replace: true });
   const { hasRole } = useAuth();
+  const agentAvailable = useAgentAvailable();
   const qc = useQueryClient();
   const toast = useToast();
   const [confirm, setConfirm] = useState(null);
@@ -280,10 +335,15 @@ export default function EventManage() {
           {tab === 'overview' && <Overview event={e} />}
           {tab === 'bookings' && <Bookings eventId={e.id} />}
           {tab === 'team' && <Team event={e} isHead={isHead} />}
+          {tab === 'edit' && editable && agentAvailable && (
+            <div style={{ maxWidth: 880, marginBottom: 'var(--space-4)' }}>
+              <AgentEdit event={e} isHead={isHead} onDone={invalidate} />
+            </div>
+          )}
           {tab === 'edit' && editable && (
             <div className="card card-body stack" style={{ maxWidth: 880 }}>
               {e.status === 'PUBLISHED' && isHead && <Alert tone="info">Price changes affect new bookings only. Capacity cannot go below {e.seatsReserved} seats already sold or held.</Alert>}
-              <EventForm key={e.id + e.status} event={e} restrictTo={isHead ? null : ['description', 'venue']} onSubmit={(b) => update.mutate(b)} submitting={update.isPending} error={update.error} />
+              <EventForm key={`${e.id}-${e.status}-${e.updatedAt}`} event={e} restrictTo={isHead ? null : ['description', 'venue']} onSubmit={(b) => update.mutate(b)} submitting={update.isPending} error={update.error} />
               <div className="actions" style={{ justifyContent: 'flex-end' }}>
                 <Button onClick={() => setTab('overview')}>Discard</Button>
                 <Button variant="primary" type="submit" form="event-form" loading={update.isPending}>Save changes</Button>

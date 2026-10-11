@@ -11,9 +11,9 @@ const toValues = (e) => ({
   venue: e?.venue || '',
   capacity: e?.capacity ? String(e.capacity) : '',
   memberPrice: paiseToRupeesInput(e?.memberPricePaise ?? null),
-  membersOnly: e ? e.nonMemberPricePaise == null : false,
+  membersOnly: e ? e.nonMemberPricePaise === null : false,
   nonMemberPrice: paiseToRupeesInput(e?.nonMemberPricePaise ?? null),
-  memberDiscountEligible: e ? e.memberDiscountEligible : true,
+  memberDiscountEligible: e?.memberDiscountEligible ?? true,
   ebMember: paiseToRupeesInput(e?.earlyBirdMemberPricePaise ?? null),
   ebNonMember: paiseToRupeesInput(e?.earlyBirdNonMemberPricePaise ?? null),
   ebQuantity: e?.earlyBirdQuantity ? String(e.earlyBirdQuantity) : '',
@@ -25,7 +25,14 @@ const toValues = (e) => ({
   endsAt: toLocalInput(e?.endsAt),
 });
 
-const SERVER_TO_FORM = { memberPricePaise: 'memberPrice', nonMemberPricePaise: 'nonMemberPrice', earlyBirdEndsAt: 'ebEndsAt', earlyBirdMemberPricePaise: 'ebMember' };
+const SERVER_TO_FORM = {
+  memberPricePaise: 'memberPrice',
+  nonMemberPricePaise: 'nonMemberPrice',
+  earlyBirdEndsAt: 'ebEndsAt',
+  earlyBirdMemberPricePaise: 'ebMember',
+  earlyBirdNonMemberPricePaise: 'ebNonMember',
+  earlyBirdQuantity: 'ebQuantity',
+};
 
 /**
  * Event create/edit form. `restrictTo` limits editable fields (organizers: description + venue).
@@ -106,7 +113,7 @@ export function EventForm({ event, onSubmit, submitting, error, restrictTo, form
           <Field label="Venue" error={form.errors.venue} required>
             <Input {...form.bind('venue')} {...dis('venue')} />
           </Field>
-          <Field label="Capacity" error={form.errors.capacity} required hint={event ? `${event.seatsReserved} seats already sold or held.` : undefined}>
+          <Field label="Capacity" error={form.errors.capacity} required hint={event?.id ? `${event.seatsReserved} seats already sold or held.` : undefined}>
             <Input type="number" min={1} inputMode="numeric" {...form.bind('capacity')} {...dis('capacity')} />
           </Field>
         </div>
@@ -150,7 +157,7 @@ export function EventForm({ event, onSubmit, submitting, error, restrictTo, form
           <Field label="Early-bird non-member price" error={form.errors.ebNonMember}>
             <MoneyInput {...form.bind('ebNonMember')} disabled={form.values.membersOnly || !can('earlyBirdNonMemberPricePaise') || submitting} />
           </Field>
-          <Field label="Early-bird tickets available" hint="Leave blank for unlimited.">
+          <Field label="Early-bird tickets available" error={form.errors.ebQuantity} hint="Leave blank for unlimited.">
             <Input type="number" min={1} inputMode="numeric" {...form.bind('ebQuantity')} {...dis('earlyBirdQuantity')} />
           </Field>
           <Field label="Early-bird ends" error={form.errors.ebEndsAt}>
