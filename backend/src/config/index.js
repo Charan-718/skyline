@@ -85,6 +85,37 @@ const envSchema = z.object({
     .default('true'),
   /** Free-text questions per user (or IP) per minute. Suggested questions are not limited. */
   ASSISTANT_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(10),
+  /**
+   * Event Draft Agent (create / edit events from a prompt). Its own key, or empty to reuse
+   * GEMINI_API_KEY. gemini-3.8-flash: slower than flash-lite but more accurate with dates.
+   */
+  EVENT_AGENT_GEMINI_API_KEY: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim() ? v.trim() : undefined)),
+  EVENT_AGENT_GEMINI_MODEL: z.string().default('gemini-3.8-flash'),
+  EVENT_AGENT_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  /** Tried once when the main model times out, errors or is rate limited. 'none' disables it. */
+  EVENT_AGENT_FALLBACK_MODEL: z.string().default('gemini-3.5-flash-lite'),
+  EVENT_AGENT_FALLBACK_TIMEOUT_MS: z.coerce.number().int().positive().default(20000),
+  /** OpenRouter (optional second provider). Free models need no credits; see openrouter.ai/models. */
+  OPENROUTER_API_KEY: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim() ? v.trim() : undefined)),
+  EVENT_AGENT_OPENROUTER_MODEL: z.string().default('nvidia/nemotron-3-super-120b-a12b:free'),
+  EVENT_AGENT_OPENROUTER_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  /**
+   * Order in which the agent tries providers, comma separated:
+   *   gemini (EVENT_AGENT_GEMINI_MODEL), openrouter (EVENT_AGENT_OPENROUTER_MODEL), gemini-fallback (EVENT_AGENT_FALLBACK_MODEL).
+   * Entries whose key is missing are skipped.
+   */
+  EVENT_AGENT_CHAIN: z.string().default('gemini,openrouter,gemini-fallback'),
+  EVENT_AGENT_ENABLED: z
+    .string()
+    .transform((v) => v !== 'false')
+    .default('true'),
+  EVENT_AGENT_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(15),
 });
 
 const parsed = envSchema.safeParse(process.env);

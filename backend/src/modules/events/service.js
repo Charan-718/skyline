@@ -4,6 +4,7 @@ import { config } from '../../config/index.js';
 import { now } from '../../shared/clock.js';
 import { buildTicketQrPayload, parseTicketQrPayload, renderQrSvg } from '../../shared/qr.js';
 import { assertTransition } from './domain/eventStateMachine.js';
+import { changedKeys, checkEventRules } from './domain/eventRules.js';
 import { deriveSalesStatus } from './domain/salesWindow.js';
 import { PRICE_TIERS } from '../pricing/PricingPolicy.js';
 import { randomToken, ticketCode } from '../../shared/tokens.js';
@@ -53,6 +54,13 @@ export function createEventService({
       organizers: orgRows.map((o) => ({ userId: o.user_id, fullName: o.full_name })),
       pricingPolicy,
     });
+  }
+
+  function assertRules(event, options) {
+    const fields = checkEventRules(event, { now: now(), ...options });
+    if (Object.keys(fields).length) {
+      throw new AppError('VALIDATION_FAILED', 400, 'Please fix the highlighted fields.', { fields });
+    }
   }
 
   async function requireManageOr404(userId, event) {
@@ -321,6 +329,7 @@ export function createEventService({
 
     async createEvent(actor, clubId, dto) {
       await authz.requireClubHead(actor.userId, clubId);
+      assertRules(dto, { mode: 'create' });
       return eventRepository.insert(
         {
           club_id: clubId,
@@ -354,6 +363,7 @@ export function createEventService({
       const orgs = await db('event_organizers').where({ event_id: eventId });
       if (orgs.length === 0) throw new AppError('ORGANIZER_REQUIRED', 422, 'Organizer required');
       assertTransition(event.status, 'publish');
+      assertRules(event, { mode: 'publish' });
       const updated = await eventRepository.update(
         eventId,
         { status: 'PUBLISHED', published_at: now() },
@@ -379,6 +389,15 @@ export function createEventService({
           fields: { capacity: `Minimum ${event.seatsReserved}.` },
         });
       }
+      assertRules(
+        { ...event, ...Object.fromEntries(Object.entries(body).filter(([, v]) => v !== undefined)) },
+        {
+          mode: 'update',
+          changed: changedKeys(event, body),
+          seatsReserved: event.seatsReserved ?? 0,
+          earlyBirdReserved: event.earlyBirdReserved ?? 0,
+        },
+      );
       const patch = patchToSnake(body);
       const updated = await eventRepository.update(eventId, patch, db);
       return presentFullEvent(updated);

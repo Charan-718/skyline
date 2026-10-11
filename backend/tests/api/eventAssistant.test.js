@@ -79,7 +79,7 @@ describe('event assistant API', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.eventTitle).toBe('Robotics Night');
     expect(res.body.data.freeText).toEqual({ available: true, requiresSignIn: true, signedIn: false });
-    expect(res.body.data.suggestions.map((s) => s.intent)).toEqual(['WHEN_WHERE', 'PRICES', 'SEATS', 'HOW_TO_BOOK', 'MEMBER_DISCOUNT', 'CONTACT']);
+    expect(res.body.data.suggestions.map((s) => s.intent)).toEqual(['WHEN_WHERE', 'PRICES', 'SEATS', 'HOW_TO_BOOK', 'MEMBER_DISCOUNT', 'ABOUT', 'CONTACT']);
     expect((await (await signedIn()).get(url())).body.data.freeText.signedIn).toBe(true);
     expect((await request(appNoKey).get(url())).body.data.freeText.available).toBe(false);
   });
@@ -118,7 +118,7 @@ describe('event assistant API', () => {
     gemini.next = { reply: { inScope: false, answer: 'Here is a poem about the sea…' } };
     const res = await (await signedIn()).post(url()).set(H).send({ message: 'Write me a poem' });
     expect(res.body.data).toEqual({
-      answer: 'I can only help with questions about "Robotics Night" — like timings, venue, tickets, prices or seats.',
+      answer: 'I can only help with questions about "Robotics Night" — like when and where it is, tickets, prices, seats or what it\'s about.',
       inScope: false,
       source: 'AI',
     });
