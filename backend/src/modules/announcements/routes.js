@@ -10,6 +10,7 @@ import {
   createAnnouncementBody,
   updateAnnouncementBody,
   deliveriesQuery,
+  clubAnnouncementsQuery,
 } from './schemas.js';
 
 export function createAnnouncementRoutes({ announcementController, authz }) {
@@ -21,7 +22,7 @@ export function createAnnouncementRoutes({ announcementController, authz }) {
   router.get(
     '/clubs/:clubId/announcements',
     requireAuth,
-    validate({ params: clubIdParam }),
+    validate({ params: clubIdParam, query: clubAnnouncementsQuery }),
     announcementController.clubList,
   );
 

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { EnvelopeSimple, Megaphone, PaperPlaneTilt, PencilSimple, Plus, Trash } from '@phosphor-icons/react';
 import { announcementsApi, eventsApi } from '../../api/endpoints';
 import { useIdempotencyKey } from '../../hooks';
 import { Card, PageHeader, Segmented } from '../../components/layout';
+import { Pagination } from '../../components/DataTable';
 import { Alert, EmptyState, LoadingState, QueryState, StatusBadge, ProgressBar } from '../../components/feedback';
 import { Button } from '../../components/Button';
 import { Checkbox, Field, Input, Select, Textarea, useForm } from '../../components/forms';
@@ -128,7 +129,13 @@ export default function Announcements() {
   const [publishing, setPublishing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [report, setReport] = useState(null);
-  const list = useQuery({ queryKey: ['announcements', 'manage', clubId], queryFn: () => announcementsApi.clubList(clubId) });
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const list = useQuery({
+    queryKey: ['announcements', 'manage', clubId, view, page],
+    queryFn: () => announcementsApi.clubList(clubId, { page, pageSize, ...(view !== 'all' ? { status: view } : {}) }),
+    placeholderData: keepPreviousData,
+  });
 
   const publish = useMutation({
     mutationFn: (id) => announcementsApi.publish(id, getKey()),
@@ -154,18 +161,26 @@ export default function Announcements() {
     onError: (e) => toast.error(e),
   });
 
-  const filtered = (rows) => rows.filter((a) => view === 'all' || a.status === view);
   return (
     <>
       <PageHeader title="Announcements" description="Write once, deliver to the whole mailing list and keep a permanent record." actions={<Button variant="primary" icon={Plus} onClick={() => setEditing(null)}>New announcement</Button>} />
       <Card flush>
         <div className="toolbar">
-          <Segmented label="Filter" value={view} onChange={setView} options={[{ value: 'all', label: 'All' }, { value: 'DRAFT', label: 'Drafts' }, { value: 'PUBLISHED', label: 'Published' }]} />
+          <Segmented
+            label="Filter"
+            value={view}
+            onChange={(v) => {
+              setView(v);
+              setPage(1);
+            }}
+            options={[{ value: 'all', label: 'All' }, { value: 'DRAFT', label: 'Drafts' }, { value: 'PUBLISHED', label: 'Published' }]}
+          />
         </div>
-        <QueryState query={list} isEmpty={(rows) => !filtered(rows).length} empty={<EmptyState icon={Megaphone} title="Nothing here yet" action={<Button onClick={() => setEditing(null)}>Write an announcement</Button>} />}>
-          {(rows) => (
+        <QueryState query={list} isEmpty={(d) => !d.data.length} empty={<EmptyState icon={Megaphone} title="Nothing here yet" action={<Button onClick={() => setEditing(null)}>Write an announcement</Button>} />}>
+          {(d) => (
+            <>
             <ul className="list">
-              {filtered(rows).map((a) => (
+              {d.data.map((a) => (
                 <li key={a.id} style={{ padding: 'var(--space-5)' }}>
                   <AnnouncementItem
                     a={a}
@@ -191,6 +206,8 @@ export default function Announcements() {
                 </li>
               ))}
             </ul>
+            <Pagination page={d.page} pageSize={d.pageSize} total={d.total} onPage={setPage} />
+            </>
           )}
         </QueryState>
       </Card>

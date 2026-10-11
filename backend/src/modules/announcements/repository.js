@@ -39,9 +39,16 @@ export function createAnnouncementRepository({ db }) {
       return trx('announcements').where({ id, status: 'DRAFT' }).del();
     },
 
-    async listForClub(clubId, trx = db) {
-      const rows = await trx('announcements').where({ club_id: clubId }).orderBy('created_at', 'desc');
-      return rows.map(toCamelCase);
+    async listForClub(clubId, filters = {}, trx = db) {
+      let q = trx('announcements').where({ club_id: clubId });
+      if (filters.status) q = q.andWhere({ status: filters.status });
+      const countRow = await q.clone().count('* as c').first();
+      const total = Number(countRow.c);
+      const rows = await q
+        .orderBy('created_at', 'desc')
+        .offset(filters.offset ?? 0)
+        .limit(filters.limit ?? 20);
+      return { rows: rows.map(toCamelCase), total };
     },
 
     async listPublished(filters, trx = db) {

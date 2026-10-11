@@ -37,7 +37,11 @@ export default function ClubPage() {
   const club = useClub(clubId);
   const id = club.data?.id;
   const events = useQuery({ queryKey: ['events', 'club', id], queryFn: () => eventsApi.clubEvents(id), enabled: !!id });
-  const news = useQuery({ queryKey: ['announcements', 'club', id], queryFn: () => announcementsApi.clubList(id), enabled: !!id });
+  const news = useQuery({
+    queryKey: ['announcements', 'club', id],
+    queryFn: () => announcementsApi.clubList(id, { page: 1, pageSize: 20, status: 'PUBLISHED' }),
+    enabled: !!id,
+  });
 
   if (club.isPending) return <PageLoader />;
   if (club.isError) return <div className="card"><ErrorState error={club.error} onRetry={() => club.refetch()} /></div>;
@@ -58,10 +62,10 @@ export default function ClubPage() {
             </QueryState>
           ) : (
             <Card>
-              <QueryState query={news} empty={<EmptyState icon={Megaphone} title="No announcements yet" />}>
-                {(list) => (
+              <QueryState query={news} isEmpty={(d) => !d.data.length} empty={<EmptyState icon={Megaphone} title="No announcements yet" />}>
+                {(d) => (
                   <div className="stack">
-                    {list.filter((a) => a.status === 'PUBLISHED').map((a, i) => (
+                    {d.data.map((a, i) => (
                       <div key={a.id} className="stack">
                         {i > 0 && <hr className="divider" style={{ margin: 0 }} />}
                         <AnnouncementItem a={a} showClub={false} />
