@@ -10,6 +10,7 @@ import { Alert, Badge, ErrorState, LoadingState, ProgressBar, StatusBadge, PageL
 import { Button } from '../../components/Button';
 import { Money } from '../../components/domain';
 import { ConfirmDialog } from '../../components/Modal';
+import { EventAssistant } from '../../components/EventAssistant';
 import { useToast } from '../../components/Toast';
 import { formatDateTime } from '../../utils/dates';
 import { formatMoney } from '../../utils/money';
@@ -213,6 +214,7 @@ export default function EventDetail() {
           </Card>
         </div>
       </div>
+      <EventAssistant eventId={e.id} eventTitle={e.title} />
     </>
   );
 }

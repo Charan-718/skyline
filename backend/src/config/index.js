@@ -67,6 +67,24 @@ const envSchema = z.object({
     .transform((v) => v !== 'false')
     .default('true'),
   FUNDRAISER_AT_RISK_TOLERANCE_PCT: z.coerce.number().default(20),
+  /**
+   * Event assistant (Google Gemini). Without a key only the suggested questions work.
+   * Keys from Google AI Studio are "auth keys" (since 28 May 2026); they go in the x-goog-api-key header.
+   * Free-tier text models (Oct 2026): gemini-3.5-flash-lite (default: fastest, minimal thinking),
+   * gemini-3.8-flash, gemini-3.6-flash, gemini-3.1-flash-lite. gemini-2.5-* is only served to old accounts.
+   */
+  GEMINI_API_KEY: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim() ? v.trim() : undefined)),
+  GEMINI_MODEL: z.string().default('gemini-3.5-flash-lite'),
+  GEMINI_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
+  ASSISTANT_ENABLED: z
+    .string()
+    .transform((v) => v !== 'false')
+    .default('true'),
+  /** Free-text questions per user (or IP) per minute. Suggested questions are not limited. */
+  ASSISTANT_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(10),
 });
 
 const parsed = envSchema.safeParse(process.env);

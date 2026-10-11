@@ -85,6 +85,32 @@ function eventReport(db, ev) {
   };
 }
 
+
+// Event assistant (demo): suggested questions answered from the event; typed questions need the
+// live backend with a Gemini key, so freeText.available is false here.
+const rupees = (p) => (p == null ? null : p === 0 ? 'Free' : `₹${(p / 100).toLocaleString('en-IN')}`);
+const ASSISTANT_SUGGESTIONS = [
+  ['WHEN_WHERE', 'When and where is it?'],
+  ['PRICES', 'How much is a ticket?'],
+  ['SEATS', 'How many seats are left?'],
+  ['HOW_TO_BOOK', 'How do I book a ticket?'],
+];
+function assistantAnswer(intent, ev) {
+  const left = ev.capacity - (ev.seatsReserved || 0);
+  switch (intent) {
+    case 'WHEN_WHERE':
+      return `${ev.title} is at ${ev.venue}, from ${new Date(ev.startsAt).toLocaleString('en-IN')} to ${new Date(ev.endsAt).toLocaleString('en-IN')}.`;
+    case 'PRICES':
+      return `Member price: ${rupees(ev.memberPricePaise)}. ${ev.nonMemberPricePaise == null ? 'This event is for club members only.' : `Non-member price: ${rupees(ev.nonMemberPricePaise)}.`}`;
+    case 'SEATS':
+      return left > 0 ? `${left} of ${ev.capacity} seats are left.` : `It is sold out: all ${ev.capacity} seats are taken.`;
+    case 'HOW_TO_BOOK':
+      return 'Sign in, open this event page and use the booking card on the right. Your ticket appears under "My tickets".';
+    default:
+      throw err(400, 'VALIDATION_FAILED', 'Unknown question.');
+  }
+}
+
 export const routes = [
   ['GET', '/events', ({ db, query }) => {
     const rows = db.events
@@ -339,5 +365,21 @@ export const routes = [
   ['GET', '/clubs/:clubId/reports/events', (ctx) => {
     requireClubRole(ctx, ctx.params.clubId, ['CLUB_HEAD', 'TREASURER']);
     return ok(ctx.db.events.filter((e) => e.clubId === ctx.params.clubId && e.status !== 'DRAFT').map((e) => ({ ...eventReport(ctx.db, e), startsAt: e.startsAt, clubName: clubOf(ctx.db, e.clubId)?.name })));
+  }],
+  ['GET', '/events/:eventId/assistant', (ctx) => {
+    const ev = visibleEvent(ctx);
+    return ok({
+      eventTitle: ev.title,
+      freeText: { available: false, requiresSignIn: true, signedIn: !!ctx.user },
+      suggestions: ASSISTANT_SUGGESTIONS.map(([intent, label]) => ({ intent, label })),
+    });
+  }],
+  ['POST', '/events/:eventId/assistant', (ctx) => {
+    const ev = visibleEvent(ctx);
+    const { intent, message } = ctx.body || {};
+    if (!intent && !message) throw err(400, 'VALIDATION_FAILED', 'Send either intent or message.');
+    if (message) throw err(503, 'ASSISTANT_UNAVAILABLE', 'Typed questions need the live backend with a Gemini key.', { reason: 'NOT_CONFIGURED' });
+    const label = ASSISTANT_SUGGESTIONS.find(([i]) => i === intent)?.[1];
+    return ok({ answer: assistantAnswer(intent, ev), inScope: true, source: 'FACTS', question: label });
   }],
 ];
