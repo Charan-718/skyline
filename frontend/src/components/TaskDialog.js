@@ -24,7 +24,7 @@ export function TaskDialog({ open, onClose, task, fundraiserId, isHead, assignee
       form.setValues({
         title: task?.title || '',
         description: task?.description || '',
-        assigneeUserId: task?.assigneeUserId || '',
+        assigneeUserId: task?.assigneeUserId || task?.assignee?.id || '',
         deadline: toLocalInput(task?.deadline),
         status: task?.status || 'TODO',
         progressPercent: task?.progressPercent ?? 0,

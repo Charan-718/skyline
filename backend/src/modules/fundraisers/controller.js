@@ -7,7 +7,10 @@ export function createFundraiserController({ fundraisers }) {
       res.json({ data: rows.map((r) => toFundraiserListItem(r.fundraiser, { progress: r.progress, money: r.money })) });
     },
     async overview(req, res) {
-      const { fundraiser, tasks, progress, money, names } = await fundraisers.overview(req.actor, req.valid.params.id);
+      const { fundraiser, tasks, progress, money, names, viewerIsClubHead, assignees } = await fundraisers.overview(
+        req.actor,
+        req.valid.params.id,
+      );
       res.json({
         data: {
           fundraiser: toFundraiserDto(fundraiser),
@@ -17,6 +20,8 @@ export function createFundraiserController({ fundraisers }) {
           counts: progress.counts,
           tasks: tasks.map((t) => toTaskDto(t, names, { overdue: progress.overdueIds.has(t.id) })),
           money: toFundraiserMoneyDto(money),
+          viewerIsClubHead,
+          assignees,
         },
       });
     },

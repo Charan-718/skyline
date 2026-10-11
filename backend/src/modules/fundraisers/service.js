@@ -44,13 +44,40 @@ export function createFundraiserService({ db, clock, access, clubs, auth, fundra
     });
   }
 
+  async function listAssignees(clubId) {
+    const rows = await db('club_role_assignments as cra')
+      .join('users as u', 'u.id', 'cra.user_id')
+      .where('cra.club_id', clubId)
+      .whereNull('cra.revoked_at')
+      .select('u.id as user_id', 'u.full_name')
+      .orderBy('u.full_name');
+    const seen = new Set();
+    const out = [];
+    for (const r of rows) {
+      if (seen.has(r.user_id)) continue;
+      seen.add(r.user_id);
+      out.push({ userId: r.user_id, fullName: r.full_name });
+    }
+    return out;
+  }
+
   /** GET /fundraisers/:id/overview (club roles; organizers excluded, OQ-38). */
   async function overview(actor, id) {
     const fundraiser = await getForTeam(actor, id);
     const tasks = await repository.listTasksOfFundraisers(db, [id]);
     const p = progressOf(fundraiser, tasks);
     const money = computeMoney(fundraiser, (await fundraiserMoney([id])).get(id));
-    return { fundraiser, tasks, progress: p, money, names: await namesOf(tasks.map((t) => t.assignee_user_id)) };
+    const standing = await access.standing(actor.userId, fundraiser.club_id);
+    const assignees = await listAssignees(fundraiser.club_id);
+    return {
+      fundraiser,
+      tasks,
+      progress: p,
+      money,
+      names: await namesOf(tasks.map((t) => t.assignee_user_id)),
+      viewerIsClubHead: standing.roles.has('CLUB_HEAD'),
+      assignees,
+    };
   }
 
   async function create(actor, clubId, dto) {

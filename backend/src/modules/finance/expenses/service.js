@@ -198,6 +198,27 @@ export function createExpenseService({ db, withTransaction, clock, access, auth,
     return repository.listExpenses(db, { club_id: clubId }, query, page(query));
   }
 
+  /** Per-row approve/pay flags for finance UI (LLD §2.10 separation of duties). */
+  async function viewerCapabilities(actor, expense) {
+    let viewerCanDecide = false;
+    let viewerCanPay = false;
+    if (expense.status === 'SUBMITTED') {
+      const ctx = await reviewContext(actor, expense, 'submitted_by');
+      viewerCanDecide = canApprove(ctx.actor, expense, { submitterRoles: ctx.personRoles }).allowed;
+    }
+    if (expense.status === 'APPROVED' && expense.payee_user_id) {
+      const ctx = await reviewContext(actor, expense, 'payee_user_id');
+      viewerCanPay = canPay(ctx.actor, expense, { payeeRoles: ctx.personRoles }).allowed;
+    }
+    return { viewerCanDecide, viewerCanPay };
+  }
+
+  async function listForClubForViewer(actor, clubId, query) {
+    const result = await listForClub(clubId, query);
+    const flags = await Promise.all(result.rows.map((e) => viewerCapabilities(actor, e)));
+    return { ...result, flags };
+  }
+
   async function listMine(actor, query) {
     return repository.listExpenses(db, { submitted_by: actor.userId }, query, page(query));
   }
@@ -210,5 +231,16 @@ export function createExpenseService({ db, withTransaction, clock, access, auth,
     return { receipts: new Map(receipts.map((f) => [f.id, f])), names: new Map(users.map((u) => [u.id, u.fullName])) };
   }
 
-  return Object.freeze({ submit, decide, markPaid, get, receipt, listForClub, listMine, describe });
+  return Object.freeze({
+    submit,
+    decide,
+    markPaid,
+    get,
+    receipt,
+    listForClub,
+    listForClubForViewer,
+    listMine,
+    describe,
+    viewerCapabilities,
+  });
 }

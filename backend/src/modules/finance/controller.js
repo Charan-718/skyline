@@ -25,9 +25,21 @@ export function createFinanceController({ expenses, income, budgets, summary }) 
       res.json({ data: await one(await expenses.get(req.actor, req.valid.params.id)) });
     },
     async listClubExpenses(req, res) {
-      const { rows, total } = await expenses.listForClub(req.valid.params.clubId, req.valid.query);
+      const { rows, total, flags } = await expenses.listForClubForViewer(
+        req.actor,
+        req.valid.params.clubId,
+        req.valid.query,
+      );
       const described = await expenses.describe(rows);
-      res.json(pageResponse(rows.map((e) => toExpenseDto(e, described)), req.valid.query, total));
+      res.json(
+        pageResponse(
+          rows.map((e, i) =>
+            toExpenseDto(e, { ...described, viewerCanDecide: flags[i].viewerCanDecide, viewerCanPay: flags[i].viewerCanPay }),
+          ),
+          req.valid.query,
+          total,
+        ),
+      );
     },
     async listMyExpenses(req, res) {
       const { rows, total } = await expenses.listMine(req.actor, req.valid.query);

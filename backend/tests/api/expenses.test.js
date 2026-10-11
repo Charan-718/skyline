@@ -358,6 +358,11 @@ describe('expenses (T-80, T-81)', () => {
       await submitExpense(await ctx.signIn(other.treasurer.id), other.club.id, { kind: 'DIRECT' });
       const list = await (await ctx.signIn(club.head.id)).get(`/api/v1/clubs/${club.club.id}/expenses`);
       expect(list.body.total).toBe(2);
+      const volClaim = list.body.data.find((e) => e.submittedBy?.id === volunteer.id);
+      expect(volClaim.viewerCanDecide).toBe(false);
+      const trList = await (await ctx.signIn(club.treasurer.id)).get(`/api/v1/clubs/${club.club.id}/expenses`);
+      const volClaimTr = trList.body.data.find((e) => e.id === volClaim.id);
+      expect(volClaimTr.viewerCanDecide).toBe(true);
       const direct = await (await ctx.signIn(club.treasurer.id)).get(`/api/v1/clubs/${club.club.id}/expenses?kind=DIRECT&status=PAID`);
       expect(direct.body.total).toBe(1);
       expect((await vol.get(`/api/v1/clubs/${club.club.id}/expenses`)).status).toBe(403);

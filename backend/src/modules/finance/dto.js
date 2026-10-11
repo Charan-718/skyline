@@ -2,7 +2,10 @@
 const iso = (v) => (v ? new Date(v).toISOString() : null);
 const person = (id, names) => (id ? { id, fullName: names.get(id) ?? null } : null);
 
-export function toExpenseDto(e, { receipts = new Map(), names = new Map() } = {}) {
+export function toExpenseDto(
+  e,
+  { receipts = new Map(), names = new Map(), viewerCanDecide, viewerCanPay } = {},
+) {
   const r = receipts.get(e.receipt_file_id);
   return {
     id: e.id,
@@ -18,6 +21,8 @@ export function toExpenseDto(e, { receipts = new Map(), names = new Map() } = {}
     receipt: r ? { fileId: r.id, originalName: r.original_name, mimeType: r.mime_type, sizeBytes: r.size_bytes } : { fileId: e.receipt_file_id },
     submittedBy: person(e.submitted_by, names),
     payee: person(e.payee_user_id, names),
+    submittedByName: names.get(e.submitted_by) ?? null,
+    payeeName: names.get(e.payee_user_id) ?? null,
     status: e.status,
     decidedBy: person(e.decided_by, names),
     decidedAt: iso(e.decided_at),
@@ -27,6 +32,8 @@ export function toExpenseDto(e, { receipts = new Map(), names = new Map() } = {}
     payoutReference: e.payout_reference,
     createdAt: iso(e.created_at),
     updatedAt: iso(e.updated_at),
+    ...(viewerCanDecide !== undefined ? { viewerCanDecide } : {}),
+    ...(viewerCanPay !== undefined ? { viewerCanPay } : {}),
   };
 }
 
