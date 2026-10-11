@@ -1740,6 +1740,12 @@ button.task-card:hover {
   transition: transform var(--duration-slow, 300ms) var(--ease-standard);
 }
 
+/* Studio photos keep their own dark backdrop: no drop shadow, a little less padding. */
+.product-art-photo img {
+  padding: var(--space-3);
+  filter: none;
+}
+
 .card:hover .product-art img {
   transform: scale(1.04);
 }
