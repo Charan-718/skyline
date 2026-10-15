@@ -14,17 +14,8 @@ function readPref() {
 
 export function ThemeProvider({ children }) {
   const [preference, setPref] = useState(readPref);
-  const [systemDark, setSystemDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
 
-  useEffect(() => {
-    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
-    if (!mq) return undefined;
-    const fn = (e) => setSystemDark(e.matches);
-    mq.addEventListener('change', fn);
-    return () => mq.removeEventListener('change', fn);
-  }, []);
-
-  const theme = preference === 'system' ? 'light' : preference;
+  const theme = preference;
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
