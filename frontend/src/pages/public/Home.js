@@ -45,10 +45,10 @@ export default function Home() {
 
       <div className="grid grid-main-side">
         <Card title="Upcoming events" actions={<Button variant="ghost" size="sm" to="/events" iconRight={ArrowRight}>All events</Button>}>
-          <QueryState query={events} loading={<LoadingState />} isEmpty={(d) => !d.data.length} empty={<EmptyState icon={CalendarBlank} title="No upcoming events">Check back soon. Clubs publish their events here.</EmptyState>}>
+          <QueryState query={events} loading={<LoadingState />} isEmpty={(d) => !d?.data?.length} empty={<EmptyState icon={CalendarBlank} title="No upcoming events">Check back soon. Clubs publish their events here.</EmptyState>}>
             {(d) => (
               <div className="grid grid-2">
-                {d.data.map((e) => (
+                {(d?.data || []).map((e) => (
                   <EventCard key={e.id} event={e} />
                 ))}
               </div>
@@ -57,10 +57,10 @@ export default function Home() {
         </Card>
         <div className="stack">
           <Card title="Latest announcements" actions={<Button variant="ghost" size="sm" to="/announcements">View all</Button>}>
-            <QueryState query={news} isEmpty={(d) => !d.data.length} empty={<EmptyState icon={Megaphone} title="Nothing announced yet" />}>
+            <QueryState query={news} isEmpty={(d) => !d?.data?.length} empty={<EmptyState icon={Megaphone} title="Nothing announced yet" />}>
               {(d) => (
                 <div className="stack">
-                  {d.data.map((a, i) => (
+                  {(d?.data || []).map((a, i) => (
                     <div key={a.id} className="stack">
                       {i > 0 && <hr className="divider" style={{ margin: 0 }} />}
                       <AnnouncementItem a={a} />
