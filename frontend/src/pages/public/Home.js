@@ -72,25 +72,28 @@ export default function Home() {
           </Card>
           <Card title="Clubs">
             <QueryState query={clubs}>
-              {(list) => (
-                <ul className="list">
-                  {list.map((c) => (
-                    <li key={c.id} style={{ paddingInline: 0 }} className="row-between">
-                      <div>
-                        <Link to={`/clubs/${c.slug}`} className="cell-title">
-                          {c.name}
-                        </Link>
-                        <div className="cell-sub">
-                          <span className="num">{`${plural(c.memberCount, 'member')} · ${plural(c.upcomingEvents, 'event')}`}</span>
+              {(list) => {
+                const items = Array.isArray(list) ? list : Array.isArray(list?.data) ? list.data : [];
+                return (
+                  <ul className="list">
+                    {items.map((c) => (
+                      <li key={c.id} style={{ paddingInline: 0 }} className="row-between">
+                        <div>
+                          <Link to={`/clubs/${c.slug}`} className="cell-title">
+                            {c.name}
+                          </Link>
+                          <div className="cell-sub">
+                            <span className="num">{`${plural(c.memberCount, 'member')} · ${plural(c.upcomingEvents, 'event')}`}</span>
+                          </div>
                         </div>
-                      </div>
-                      <Button size="sm" to={`/clubs/${c.slug}`}>
-                        View
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                        <Button size="sm" to={`/clubs/${c.slug}`}>
+                          View
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                );
+              }}
             </QueryState>
           </Card>
         </div>
