@@ -1,13 +1,14 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-const ThemeContext = createContext({ theme: 'light', preference: 'system', setPreference: () => {} });
+const ThemeContext = createContext({ theme: 'light', preference: 'light', setPreference: () => {} });
 const KEY = 'soms.theme';
 
 function readPref() {
   try {
-    return window.localStorage.getItem(KEY) || 'system';
+    const saved = window.localStorage.getItem(KEY);
+    return saved === 'dark' || saved === 'light' ? saved : 'light';
   } catch {
-    return 'system';
+    return 'light';
   }
 }
 
@@ -23,7 +24,7 @@ export function ThemeProvider({ children }) {
     return () => mq.removeEventListener('change', fn);
   }, []);
 
-  const theme = preference === 'system' ? (systemDark ? 'dark' : 'light') : preference;
+  const theme = preference === 'system' ? 'light' : preference;
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
